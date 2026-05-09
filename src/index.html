@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>js-tetris-3d</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="title">js-tetris-3d</h1>
+    <div class="hud" role="group" aria-label="game stats">
+      <div class="hud-item">
+        <span class="hud-label">Cubes Played</span>
+        <span class="hud-value" data-hud="cubes">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">High Score</span>
+        <span class="hud-value" data-hud="high">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Score</span>
+        <span class="hud-value" data-hud="score">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Level</span>
+        <span class="hud-value" data-hud="level">0</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage" aria-label="3D game stage">
+      <canvas id="game-canvas"></canvas>
+      <div class="stage-overlay" data-overlay hidden>
+        <div class="overlay-card">
+          <h2 data-overlay-title>Press B to start</h2>
+          <p data-overlay-body>화살표 = 이동 · QWE/ASD = 회전 · Space = 드롭 · P = 일시정지</p>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="game options">
+      <fieldset class="panel-group">
+        <legend>Rotation</legend>
+        <p class="panel-hint">Q / W / E = X / Y / Z 축 시계 방향<br/>A / S / D = X / Y / Z 축 반시계 방향</p>
+      </fieldset>
+
+      <fieldset class="panel-group" data-option="speed">
+        <legend>Speed</legend>
+        <label><input type="radio" name="speed" value="slow" /> Slow</label>
+        <label><input type="radio" name="speed" value="medium" checked /> Medium</label>
+        <label><input type="radio" name="speed" value="fast" /> Fast</label>
+      </fieldset>
+
+      <fieldset class="panel-group" data-option="level">
+        <legend>Start Level</legend>
+        <label><input type="radio" name="level" value="0" checked /> 0</label>
+        <label><input type="radio" name="level" value="1" /> 1</label>
+        <label><input type="radio" name="level" value="2" /> 2</label>
+        <label><input type="radio" name="level" value="3" /> 3</label>
+        <label><input type="radio" name="level" value="4" /> 4</label>
+      </fieldset>
+
+      <fieldset class="panel-group" data-option="pit">
+        <legend>Pit</legend>
+        <label><input type="radio" name="pit" value="3x3x10" /> 3 × 3 × 10</label>
+        <label><input type="radio" name="pit" value="5x5x10" checked /> 5 × 5 × 10</label>
+        <label><input type="radio" name="pit" value="5x5x12" /> 5 × 5 × 12</label>
+      </fieldset>
+
+      <fieldset class="panel-group" data-option="blockset">
+        <legend>Block Set</legend>
+        <label><input type="radio" name="blockset" value="flat" /> Flat</label>
+        <label><input type="radio" name="blockset" value="basic" checked /> Basic</label>
+        <label><input type="radio" name="blockset" value="extended" /> Extended</label>
+      </fieldset>
+
+      <div class="panel-actions">
+        <button type="button" data-action="start">Start (B)</button>
+        <button type="button" data-action="pause">Pause (P)</button>
+        <button type="button" data-action="reset">Reset</button>
+      </div>
+
+      <div class="panel-next">
+        <h3>Next</h3>
+        <canvas id="next-canvas" width="120" height="120"></canvas>
+      </div>
+    </aside>
+  </main>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

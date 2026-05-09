@@ -1,0 +1,35 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Node (npx http-server 등이 만들 수 있는 산출물)
+node_modules/
+.npm/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# 향후 빌드 산출물 대비 (현재는 빌드 단계 없음)
+dist/
+build/
+coverage/
+.cache/
+
+# 임시 / 백업
+*.bak
+*.tmp
