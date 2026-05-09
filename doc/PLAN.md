@@ -153,6 +153,15 @@ Phase 0 (기반)  →  Phase 1 (Blockout 클론)  →  Phase 2 (자유 카메라
 - [ ] **PWA / 오프라인** — CDN three.js 캐싱 정책 정리 필요. 다음 라운드
 - [ ] **레벨별 음악** — 선택 사항, 보류
 
+### 사용자 피드백 5차
+
+- [x] **좌상단 좌표계 gizmo** — `src/js/axesGizmo.js` 신규. 별도 `WebGLRenderer` + `OrthographicCamera` 가 메인 카메라의 `position - target` 방향에서 X(빨강) / Y(초록) / Z(파랑) ArrowHelper + Sprite 라벨을 같은 각도로 매 프레임 그림
+- [x] **블럭 무게중심 회전** — `Block.absCentroid()` 신규. `rotate(axis, dir)` 가 회전 전후의 절대 centroid 가 같도록 `position` 을 `Math.round(before − after)` 로 보정. 짝수 폭(예: I 4-cube) 은 round 차이 ≤ 0.5
+- [x] **회전 애니메이션 옵션 (default ON)** — 우측 패널에 `Rotation animation` 체크박스. ON 일 때 `tryRotate` 성공 시 `Game.lastRotation = { axis, dir, fromAbsCentroid, toAbsCentroid }` 저장. main 이 이를 받아 mesh.quaternion 을 `rotationQuat(axis, -dir)` 에서 identity 로, position 을 fromPos→toPos 로 150ms ease-out³ 보간
+- [x] **FLAT 블럭셋 재정의** — 거울쌍(S↔Z, L↔J)은 한 종류만 유지(S, L). 1-cube(I1) / 2-cube(I2) / 3-cube(I3, L3) 추가. 결과 9종 (이전 7종)
+- [x] **떨어지는 블럭을 채워진 반투명 큐브로** — `createFallingBlockMesh()` 신규(`InstancedMesh` + `RoundedBoxGeometry`, opacity 0.45, depthWrite false). 이전 흰색 wireframe 제거. 인스턴스를 centroid 기준 로컬 좌표에 두고 `mesh.position` 을 절대 centroid 로 → `mesh.quaternion` 으로 무게중심 회전 가능
+- [x] **wallShadow / falling 분리** — 회전 애니메이션이 mesh 에만 적용되고 그림자엔 영향 없도록 `createWallShadowGroup` / `updateWallShadowGroup` 별도 그룹
+
 ### 사용자 피드백 4차 — 우측 패널 정리
 
 - [x] **콤보박스(`<select>`) 화** — Speed / Start Level / Pit / Block Set / Theme 다섯 옵션을 라디오 그룹에서 컴팩트한 한 줄짜리 콤보박스로

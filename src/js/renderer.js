@@ -1,12 +1,13 @@
-// pit 외곽선 + 4 측벽 격자 + 쌓인 셀 InstancedMesh + 떨어지는 블럭 그룹(와이어프레임 + 벽 그림자) + ghost block.
+// pit 외곽선 + 4 측벽 격자 + 쌓인 셀 InstancedMesh + 떨어지는 블럭(채워진 반투명 RoundedBox InstancedMesh) +
+// 벽 그림자(Group) + ghost block(LineSegments).
 
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { paletteColor, layerColorHex } from './blocksets.js';
 
 const CELL = 1;
-const WIRE_COLOR = 0xffffff;
 const SHADOW_OPACITY = 0.45;
+const FALLING_OPACITY = 0.45;
 const GAP_EPS = 0.002;
 const SHADOW_EPS = 0.012;
 const GHOST_COLOR = 0xfff366;
@@ -105,36 +106,73 @@ export function updateCellsMesh(mesh, pit) {
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
 }
 
-// 떨어지는 블럭 그룹 — 흰 와이어프레임 + 두 벽면 그림자.
-export function createCurrentBlockGroup() {
-  const group = new THREE.Group();
-  group.name = 'current-block';
-  return group;
+// 떨어지는 블럭 — 채워진 반투명 RoundedBox InstancedMesh.
+// 인스턴스는 centroid 기준 로컬 좌표로 배치. mesh.position 이 절대 centroid → 회전 anim 시 quaternion 으로 무게중심 회전.
+export function createFallingBlockMesh() {
+  const geom = new RoundedBoxGeometry(0.92, 0.92, 0.92, 4, 0.12);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: FALLING_OPACITY,
+    roughness: 0.5,
+    metalness: 0.05,
+    depthWrite: false, // 반투명 정렬
+  });
+  const mesh = new THREE.InstancedMesh(geom, mat, 16);
+  mesh.count = 0;
+  mesh.renderOrder = 2; // 쌓인 셀(0) / pit grid(0) / ghost(1) 보다 위에 그림.
+  return mesh;
+}
+
+export function updateFallingBlockMesh(mesh, block) {
+  if (!block) {
+    mesh.count = 0;
+    mesh.instanceMatrix.needsUpdate = true;
+    return;
+  }
+  const n = block.cells.length;
+  let cx = 0, cy = 0, cz = 0;
+  for (const [x, y, z] of block.cells) {
+    cx += x + 0.5; cy += y + 0.5; cz += z + 0.5;
+  }
+  cx /= n; cy /= n; cz /= n;
+
+  const cap = mesh.instanceMatrix.count;
+  let i = 0;
+  for (const [x, y, z] of block.cells) {
+    if (i >= cap) break;
+    _m.makeTranslation(x + 0.5 - cx, y + 0.5 - cy, z + 0.5 - cz);
+    mesh.setMatrixAt(i, _m);
+    i++;
+  }
+  mesh.count = i;
+  mesh.instanceMatrix.needsUpdate = true;
+
+  mesh.material.color.setHex(paletteColor(block.colorIdx)?.hex ?? 0xffffff);
+
+  const [px, py, pz] = block.position;
+  mesh.position.set(px + cx, py + cy, pz + cz);
+  // mesh.quaternion 은 main.js 의 회전 anim 이 직접 다룬다.
+}
+
+// 벽면 그림자 — 회전 anim 영향 없이 절대 좌표로 그림. 별도 그룹.
+export function createWallShadowGroup() {
+  const g = new THREE.Group();
+  g.name = 'wall-shadow';
+  return g;
 }
 
 const SHADOW_PLANE_GEOM = new THREE.PlaneGeometry(0.92, 0.92);
 
-export function updateCurrentBlockGroup(group, block) {
+export function updateWallShadowGroup(group, block) {
   while (group.children.length > 0) {
     const c = group.children.pop();
-    if (c.userData.disposeGeometry) c.geometry?.dispose?.();
     c.material?.dispose?.();
   }
   if (!block) return;
 
   const cells = block.absCells();
   const blockHex = paletteColor(block.colorIdx)?.hex ?? 0xffffff;
-
-  const verts = [];
-  for (const [x, y, z] of cells) pushCubeEdges(verts, x, y, z);
-  if (verts.length > 0) {
-    const wireGeo = new THREE.BufferGeometry();
-    wireGeo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-    const wireMat = new THREE.LineBasicMaterial({ color: WIRE_COLOR });
-    const wires = new THREE.LineSegments(wireGeo, wireMat);
-    wires.userData.disposeGeometry = true;
-    group.add(wires);
-  }
 
   const xWallSeen = new Set();
   const zWallSeen = new Set();
@@ -164,7 +202,7 @@ export function updateCurrentBlockGroup(group, block) {
   }
 }
 
-// ghost group: hard-drop 멈춤 위치를 노란 wireframe 으로.
+// ghost group — hard-drop 멈춤 위치를 노란 wireframe.
 export function createGhostGroup() {
   const g = new THREE.Group();
   g.name = 'ghost';

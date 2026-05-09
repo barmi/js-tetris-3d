@@ -1,5 +1,4 @@
-// 우측 옵션 패널 / 상단 HUD / 중앙 오버레이 + View 프리셋 + Theme/Palette/Sound 옵션.
-// 옵션은 콤보박스(<select data-option>) 와 체크박스(<input data-option-check>) 두 종류로.
+// 우측 옵션 패널 / 상단 HUD / 중앙 오버레이 + View 프리셋 + Theme/Palette/Sound/RotateAnim 옵션.
 
 import { saveOption, loadOptions, loadHighScore, loadStats } from './storage.js';
 
@@ -8,32 +7,35 @@ const VALID_THEMES = ['dark', 'light', 'neon', 'minimal'];
 export function readOptions() {
   const stored = loadOptions();
   return {
-    speed:    stored.speed    ?? readSelect('speed')    ?? 'medium',
-    level:    stored.level    ?? readSelect('level')    ?? '0',
-    pit:      stored.pit      ?? readSelect('pit')      ?? '5x5x10',
-    blockset: stored.blockset ?? readSelect('blockset') ?? 'basic',
-    theme:    stored.theme    ?? readSelect('theme')    ?? 'dark',
-    palette:  stored.palette  ?? (readCheck('palette') ? 'colorblind' : 'standard'),
-    sound:    stored.sound    ?? (readCheck('sound') ? 'on' : 'off'),
+    speed:       stored.speed       ?? readSelect('speed')       ?? 'medium',
+    level:       stored.level       ?? readSelect('level')       ?? '0',
+    pit:         stored.pit         ?? readSelect('pit')         ?? '5x5x10',
+    blockset:    stored.blockset    ?? readSelect('blockset')    ?? 'basic',
+    theme:       stored.theme       ?? readSelect('theme')       ?? 'dark',
+    palette:     stored.palette     ?? (readCheck('palette')    ? 'colorblind' : 'standard'),
+    sound:       stored.sound       ?? (readCheck('sound')      ? 'on' : 'off'),
+    rotateAnim:  stored.rotateAnim  ?? (readCheck('rotateAnim') ? 'on' : 'off'),
   };
 }
 
-export function bindUI({ game, onPitChange, onOptionsChange, onView, onTheme, onPalette, onSound }) {
+export function bindUI({
+  game, onPitChange, onOptionsChange, onView,
+  onTheme, onPalette, onSound, onRotateAnim,
+}) {
   const opts = readOptions();
 
-  // DOM 초기 동기화.
   for (const k of ['speed', 'level', 'pit', 'blockset', 'theme']) writeSelect(k, opts[k]);
-  writeCheck('palette', opts.palette === 'colorblind');
-  writeCheck('sound',   opts.sound === 'on');
+  writeCheck('palette',    opts.palette    === 'colorblind');
+  writeCheck('sound',      opts.sound      === 'on');
+  writeCheck('rotateAnim', opts.rotateAnim === 'on');
 
-  // 게임/시각 옵션 초기 적용.
   game.applyOptions(opts);
   applyTheme(opts.theme);
   onTheme?.(opts.theme);
   onPalette?.(opts.palette);
   onSound?.(opts.sound);
+  onRotateAnim?.(opts.rotateAnim);
 
-  // 콤보박스 변경.
   document.querySelectorAll('select[data-option]').forEach((sel) => {
     const name = sel.getAttribute('data-option');
     sel.addEventListener('change', () => {
@@ -49,7 +51,6 @@ export function bindUI({ game, onPitChange, onOptionsChange, onView, onTheme, on
     });
   });
 
-  // 체크박스 변경.
   document.querySelectorAll('input[data-option-check]').forEach((cb) => {
     const name = cb.getAttribute('data-option-check');
     const onValue  = cb.getAttribute('data-on-value')  ?? 'on';
@@ -59,24 +60,22 @@ export function bindUI({ game, onPitChange, onOptionsChange, onView, onTheme, on
       saveOption(name, v);
       opts[name] = v;
       switch (name) {
-        case 'palette': onPalette?.(v); break;
-        case 'sound':   onSound?.(v);   break;
+        case 'palette':    onPalette?.(v); break;
+        case 'sound':      onSound?.(v);   break;
+        case 'rotateAnim': onRotateAnim?.(v); break;
       }
       onOptionsChange?.({ ...opts });
     });
   });
 
-  // 액션 버튼.
   document.querySelector('[data-action="start"]')?.addEventListener('click', () => game.start());
   document.querySelector('[data-action="pause"]')?.addEventListener('click', () => game.pause());
   document.querySelector('[data-action="reset"]')?.addEventListener('click', () => game.reset());
 
-  // View 프리셋 버튼.
   document.querySelectorAll('[data-view]').forEach((btn) => {
     btn.addEventListener('click', () => onView?.(btn.getAttribute('data-view')));
   });
 
-  // HUD / 오버레이 갱신.
   game.on(() => updateHud(game));
   updateHud(game);
 }

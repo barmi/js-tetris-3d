@@ -60,6 +60,8 @@ export class Game {
     this.next = null;
     this.bestComboThisGame = 0;
     this.lastClearedYs = [];
+    // 회전 anim 정보 — main.js 가 mesh.quaternion / mesh.position 보간에 사용.
+    this.lastRotation = null;
     this.dirty = true;
     this.listeners = new Set();
   }
@@ -171,21 +173,24 @@ export class Game {
 
   tryRotate(axis, dir) {
     if (this.state !== 'running' || !this.current) return false;
+    const fromAbs = this.current.absCentroid();
     const c = this.current.clone();
     c.rotate(axis, dir);
     fitInsidePit(c, this.pit);
-    if (this.pit.canPlace(c.absCells())) {
+    const commit = () => {
       this.current = c;
+      this.lastRotation = { axis, dir, fromAbsCentroid: fromAbs, toAbsCentroid: c.absCentroid() };
       this.dirty = true;
       this.emit('rotate');
+    };
+    if (this.pit.canPlace(c.absCells())) {
+      commit();
       return true;
     }
     for (const [dx, dy, dz] of ROT_KICKS) {
       c.translate(dx, dy, dz);
       if (this.pit.canPlace(c.absCells())) {
-        this.current = c;
-        this.dirty = true;
-        this.emit('rotate');
+        commit();
         return true;
       }
       c.translate(-dx, -dy, -dz);

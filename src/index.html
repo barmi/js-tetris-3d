@@ -40,23 +40,22 @@
   <main class="layout">
     <section class="stage" aria-label="3D game stage">
       <canvas id="game-canvas"></canvas>
+      <canvas id="axes-canvas" class="axes-gizmo" width="110" height="110" aria-label="axes gizmo"></canvas>
       <div class="stage-overlay" data-overlay hidden>
         <div class="overlay-card">
           <h2 data-overlay-title>Press B to start</h2>
-          <p data-overlay-body>화살표 = 이동 · QWE/ASD = 회전 · Space = 드롭 · 1/2/3/4 = 시점 · P = 일시정지</p>
+          <p data-overlay-body>화살표 = 이동(카메라 기준) · QWE/ASD = 회전 · Space = 드롭 · 1/2/3/4 = 시점 · P = 일시정지</p>
         </div>
       </div>
     </section>
 
     <aside class="panel" aria-label="game options">
-      <!-- 1. 액션 버튼 (가장 위) -->
       <div class="panel-actions">
         <button type="button" data-action="start">Start (B)</button>
         <button type="button" data-action="pause">Pause (P)</button>
         <button type="button" data-action="reset">Reset</button>
       </div>
 
-      <!-- 2. 시점 프리셋 -->
       <div class="panel-views" aria-label="view presets">
         <button type="button" data-view="top">Top (1)</button>
         <button type="button" data-view="iso">ISO (2)</button>
@@ -64,13 +63,11 @@
         <button type="button" data-view="side">Side (4)</button>
       </div>
 
-      <!-- 3. NEXT 미리보기 (확장된 사이즈) -->
       <div class="panel-next">
         <h3>Next</h3>
         <canvas id="next-canvas" width="200" height="200"></canvas>
       </div>
 
-      <!-- 4. 게임 옵션 (콤보박스) -->
       <div class="opt-row">
         <label for="opt-speed">Speed</label>
         <select id="opt-speed" data-option="speed">
@@ -107,7 +104,6 @@
         </select>
       </div>
 
-      <!-- 5. 시각 옵션 (콤보 + 체크박스) -->
       <div class="opt-row">
         <label for="opt-theme">Theme</label>
         <select id="opt-theme" data-option="theme">
@@ -116,6 +112,12 @@
           <option value="neon">Neon</option>
           <option value="minimal">Minimal</option>
         </select>
+      </div>
+      <div class="opt-row opt-row-check">
+        <label>
+          <input type="checkbox" data-option-check="rotateAnim" data-on-value="on" data-off-value="off" checked />
+          Rotation animation
+        </label>
       </div>
       <div class="opt-row opt-row-check">
         <label>
@@ -130,7 +132,6 @@
         </label>
       </div>
 
-      <!-- 6. 컨트롤 안내 (가장 아래, 접힘 가능) -->
       <details class="panel-hint-block">
         <summary>Controls</summary>
         <p>
