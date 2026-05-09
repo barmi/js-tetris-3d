@@ -54,18 +54,21 @@ export class Pit {
     }
   }
 
-  // 가득 찬 Y 층을 모두 제거하고 위 칸을 한 칸씩 끌어내린다. 제거된 층 수를 반환.
+  // 가득 찬 Y 층을 모두 제거하고 위 칸을 한 칸씩 끌어내린다.
+  // 제거된 Y 인덱스 배열을 반환 — 파티클 효과가 어느 층에서 발생할지 알 수 있도록.
+  // collapse 후 같은 y 가 또 가득 차 있으면 두 번 push 될 수 있다 (중복 허용).
   clearFullLayers() {
-    let cleared = 0;
-    for (let y = 0; y < this.height; ) {
+    const clearedYs = [];
+    let y = 0;
+    while (y < this.height) {
       if (this.isLayerFull(y)) {
+        clearedYs.push(y);
         this.collapseLayer(y);
-        cleared++;
       } else {
         y++;
       }
     }
-    return cleared;
+    return clearedYs;
   }
 
   isLayerFull(y) {

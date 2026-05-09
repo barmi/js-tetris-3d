@@ -3,6 +3,9 @@
 import * as THREE from 'three';
 import { paletteColor } from './blocksets.js';
 
+// frustum half-size — 큰 polycube (size 4 까지) 도 여유롭게 들어가도록.
+const FRUSTUM_HALF = 3.5;
+
 export function createNextPreview(canvas) {
   const scene = new THREE.Scene();
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -13,7 +16,11 @@ export function createNextPreview(canvas) {
   renderer.setSize(w, h, false);
 
   const aspect = w / h;
-  const camera = new THREE.OrthographicCamera(-3 * aspect, 3 * aspect, 3, -3, 0.1, 100);
+  const camera = new THREE.OrthographicCamera(
+    -FRUSTUM_HALF * aspect,  FRUSTUM_HALF * aspect,
+     FRUSTUM_HALF,           -FRUSTUM_HALF,
+     0.1, 100,
+  );
   camera.position.set(5, 5, 5);
   camera.lookAt(0, 0, 0);
 

@@ -149,9 +149,17 @@ Phase 0 (기반)  →  Phase 1 (Blockout 클론)  →  Phase 2 (자유 카메라
 - [x] **색맹 친화 팔레트** — Okabe-Ito 8색. `setColorPalette('standard'|'colorblind')` 런타임 스위치, 즉시 갱신
 - [ ] **모바일 터치** — `OrbitControls` 와 single-touch 가 충돌해 별도 디자인 필요(가상 D-pad / 영역 분할). 다음 라운드
 - [ ] **리플레이** — 입력 시퀀스 기록 / 재생. 다음 라운드
-- [ ] **화면 흔들림 / 파티클** — 라인 클리어 폴리시. 다음 라운드
+- [x] **화면 흔들림 / 파티클** — 라인 클리어 시 셀당 4개 파티클 폭발(중력 적용, 700 ms 수명) + 카메라 흔들림(라인 수에 비례, 240 ms ease-out²). 게임오버 시 더 강한 흔들림(0.4 / 480 ms)
 - [ ] **PWA / 오프라인** — CDN three.js 캐싱 정책 정리 필요. 다음 라운드
 - [ ] **레벨별 음악** — 선택 사항, 보류
+
+### 사용자 피드백 4차 — 우측 패널 정리
+
+- [x] **콤보박스(`<select>`) 화** — Speed / Start Level / Pit / Block Set / Theme 다섯 옵션을 라디오 그룹에서 컴팩트한 한 줄짜리 콤보박스로
+- [x] **체크박스 단순화** — 2지선다인 Color Palette / Sound 를 체크박스 한 칸으로 (`Colorblind palette` / `Sound effects`)
+- [x] **NEXT 캔버스 확장** — 120×120 → 200×200 (모바일 160×160). `OrthographicCamera` frustum 도 ±3 → ±3.5 로 키워 큰 polycube 도 들어가게
+- [x] **순서 재배치** — Action 버튼 → View 버튼 → NEXT → 게임 옵션 → 시각 옵션 → Controls(접힘) 순. 가장 자주 쓰는 컨트롤이 위에 위치
+- [x] **Controls 안내 접힘** — `<details>` 로 기본 닫힘. 키 / 마우스 안내가 패널 높이 차지하지 않음
 
 ### 사용자 피드백 3차 (Phase 3 동시 반영)
 

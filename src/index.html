@@ -43,89 +43,104 @@
       <div class="stage-overlay" data-overlay hidden>
         <div class="overlay-card">
           <h2 data-overlay-title>Press B to start</h2>
-          <p data-overlay-body>화살표 = 이동(카메라 기준) · QWE/ASD = 회전 · Space = 드롭 · 1/2/3/4 = 시점 · P = 일시정지</p>
+          <p data-overlay-body>화살표 = 이동 · QWE/ASD = 회전 · Space = 드롭 · 1/2/3/4 = 시점 · P = 일시정지</p>
         </div>
       </div>
     </section>
 
     <aside class="panel" aria-label="game options">
-      <fieldset class="panel-group">
-        <legend>Rotation</legend>
-        <p class="panel-hint">Q / W / E = X / Y / Z 축 시계 방향<br/>A / S / D = X / Y / Z 축 반시계 방향</p>
-      </fieldset>
-
-      <fieldset class="panel-group" data-option="speed">
-        <legend>Speed</legend>
-        <label><input type="radio" name="speed" value="antigravity" /> Antigravity</label>
-        <label><input type="radio" name="speed" value="slow" /> Slow</label>
-        <label><input type="radio" name="speed" value="medium" checked /> Medium</label>
-        <label><input type="radio" name="speed" value="fast" /> Fast</label>
-      </fieldset>
-
-      <fieldset class="panel-group" data-option="level">
-        <legend>Start Level</legend>
-        <label><input type="radio" name="level" value="0" checked /> 0</label>
-        <label><input type="radio" name="level" value="1" /> 1</label>
-        <label><input type="radio" name="level" value="2" /> 2</label>
-        <label><input type="radio" name="level" value="3" /> 3</label>
-        <label><input type="radio" name="level" value="4" /> 4</label>
-      </fieldset>
-
-      <fieldset class="panel-group" data-option="pit">
-        <legend>Pit</legend>
-        <label><input type="radio" name="pit" value="3x3x10" /> 3 × 3 × 10</label>
-        <label><input type="radio" name="pit" value="5x5x10" checked /> 5 × 5 × 10</label>
-        <label><input type="radio" name="pit" value="5x5x12" /> 5 × 5 × 12</label>
-      </fieldset>
-
-      <fieldset class="panel-group" data-option="blockset">
-        <legend>Block Set</legend>
-        <label><input type="radio" name="blockset" value="flat" /> Flat</label>
-        <label><input type="radio" name="blockset" value="basic" checked /> Basic</label>
-        <label><input type="radio" name="blockset" value="extended" /> Extended</label>
-      </fieldset>
-
+      <!-- 1. 액션 버튼 (가장 위) -->
       <div class="panel-actions">
         <button type="button" data-action="start">Start (B)</button>
         <button type="button" data-action="pause">Pause (P)</button>
         <button type="button" data-action="reset">Reset</button>
       </div>
 
-      <fieldset class="panel-group">
-        <legend>View (1 / 2 / 3 / 4)</legend>
-        <div class="panel-views">
-          <button type="button" data-view="top">Top</button>
-          <button type="button" data-view="iso">ISO</button>
-          <button type="button" data-view="front">Front</button>
-          <button type="button" data-view="side">Side</button>
-        </div>
-        <p class="panel-hint">마우스 드래그 = 회전 · 휠 = 줌 · Shift + 드래그 = 패닝</p>
-      </fieldset>
+      <!-- 2. 시점 프리셋 -->
+      <div class="panel-views" aria-label="view presets">
+        <button type="button" data-view="top">Top (1)</button>
+        <button type="button" data-view="iso">ISO (2)</button>
+        <button type="button" data-view="front">Front (3)</button>
+        <button type="button" data-view="side">Side (4)</button>
+      </div>
 
-      <fieldset class="panel-group" data-option="theme">
-        <legend>Theme</legend>
-        <label><input type="radio" name="theme" value="dark" checked /> Dark</label>
-        <label><input type="radio" name="theme" value="light" /> Light</label>
-        <label><input type="radio" name="theme" value="neon" /> Neon</label>
-        <label><input type="radio" name="theme" value="minimal" /> Minimal</label>
-      </fieldset>
-
-      <fieldset class="panel-group" data-option="palette">
-        <legend>Color Palette</legend>
-        <label><input type="radio" name="palette" value="standard" checked /> Standard</label>
-        <label><input type="radio" name="palette" value="colorblind" /> Colorblind-friendly</label>
-      </fieldset>
-
-      <fieldset class="panel-group" data-option="sound">
-        <legend>Sound</legend>
-        <label><input type="radio" name="sound" value="on" checked /> On</label>
-        <label><input type="radio" name="sound" value="off" /> Off</label>
-      </fieldset>
-
+      <!-- 3. NEXT 미리보기 (확장된 사이즈) -->
       <div class="panel-next">
         <h3>Next</h3>
-        <canvas id="next-canvas" width="120" height="120"></canvas>
+        <canvas id="next-canvas" width="200" height="200"></canvas>
       </div>
+
+      <!-- 4. 게임 옵션 (콤보박스) -->
+      <div class="opt-row">
+        <label for="opt-speed">Speed</label>
+        <select id="opt-speed" data-option="speed">
+          <option value="antigravity">Antigravity</option>
+          <option value="slow">Slow</option>
+          <option value="medium" selected>Medium</option>
+          <option value="fast">Fast</option>
+        </select>
+      </div>
+      <div class="opt-row">
+        <label for="opt-level">Start Level</label>
+        <select id="opt-level" data-option="level">
+          <option value="0" selected>0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+        </select>
+      </div>
+      <div class="opt-row">
+        <label for="opt-pit">Pit</label>
+        <select id="opt-pit" data-option="pit">
+          <option value="3x3x10">3 × 3 × 10</option>
+          <option value="5x5x10" selected>5 × 5 × 10</option>
+          <option value="5x5x12">5 × 5 × 12</option>
+        </select>
+      </div>
+      <div class="opt-row">
+        <label for="opt-blockset">Block Set</label>
+        <select id="opt-blockset" data-option="blockset">
+          <option value="flat">Flat</option>
+          <option value="basic" selected>Basic</option>
+          <option value="extended">Extended</option>
+        </select>
+      </div>
+
+      <!-- 5. 시각 옵션 (콤보 + 체크박스) -->
+      <div class="opt-row">
+        <label for="opt-theme">Theme</label>
+        <select id="opt-theme" data-option="theme">
+          <option value="dark" selected>Dark</option>
+          <option value="light">Light</option>
+          <option value="neon">Neon</option>
+          <option value="minimal">Minimal</option>
+        </select>
+      </div>
+      <div class="opt-row opt-row-check">
+        <label>
+          <input type="checkbox" data-option-check="palette" data-on-value="colorblind" data-off-value="standard" />
+          Colorblind palette
+        </label>
+      </div>
+      <div class="opt-row opt-row-check">
+        <label>
+          <input type="checkbox" data-option-check="sound" data-on-value="on" data-off-value="off" checked />
+          Sound effects
+        </label>
+      </div>
+
+      <!-- 6. 컨트롤 안내 (가장 아래, 접힘 가능) -->
+      <details class="panel-hint-block">
+        <summary>Controls</summary>
+        <p>
+          화살표 = 이동(카메라 기준) · Space = 하드 드롭<br/>
+          Q W E / A S D = X · Y · Z 축 양방향 회전<br/>
+          1 / 2 / 3 / 4 = Top / ISO / Front / Side 시점<br/>
+          마우스 드래그 = 회전 · 휠 = 줌 · Shift + 드래그 = 패닝<br/>
+          B = 시작 · P = 일시정지 · Esc = 종료
+        </p>
+      </details>
     </aside>
   </main>
 

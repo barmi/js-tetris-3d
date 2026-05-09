@@ -8,6 +8,7 @@ import {
   createCurrentBlockGroup, updateCurrentBlockGroup,
   createGhostGroup, updateGhostGroup,
 } from './renderer.js';
+import { createEffects, spawnLayerParticles, updateEffects } from './effects.js';
 import { createNextPreview } from './nextPreview.js';
 import { Game } from './game.js';
 import { bindUI, readOptions } from './ui.js';
@@ -15,6 +16,7 @@ import { bindKeyboard } from './controls.js';
 import {
   createCameraControls, configureForPit, applyPreset,
   applyCameraView, readCameraView, updateCameraControls,
+  startShake,
 } from './cameraControls.js';
 import { loadCameraView, saveCameraView } from './storage.js';
 import { setColorPalette } from './blocksets.js';
@@ -39,7 +41,8 @@ let pitMesh = createPitMesh(pit);
 let cellsMesh = createCellsMesh(pit);
 let currentGroup = createCurrentBlockGroup();
 let ghostGroup = createGhostGroup();
-scene.add(pitMesh, cellsMesh, currentGroup, ghostGroup);
+const effects = createEffects();
+scene.add(pitMesh, cellsMesh, currentGroup, ghostGroup, effects.mesh);
 
 const cameraState = createCameraControls(camera, canvas, pit);
 if (!applyCameraView(cameraState, loadCameraView())) {
@@ -51,19 +54,25 @@ const game = new Game({ pit });
 
 let lastNextRef = null;
 game.on((g, type) => {
-  // 다음 블럭이 바뀐 순간만 미리보기를 다시 그린다.
   if (g.next !== lastNextRef) {
     lastNextRef = g.next;
     nextPreview.setBlock(g.next);
   }
-  // SFX
   switch (type) {
     case 'move':     sfx.move(); break;
     case 'rotate':   sfx.rotate(); break;
     case 'drop':     sfx.drop(); break;
     case 'lock':     sfx.lock(); break;
-    case 'clear':    sfx.clear(); break;
-    case 'gameover': sfx.gameOver(); break;
+    case 'clear':
+      sfx.clear();
+      spawnLayerParticles(effects, pit, g.lastClearedYs);
+      // 동시 클리어 라인 수에 비례한 흔들림 강도.
+      startShake(cameraState, Math.min(0.35, 0.12 * (g.lastClearedYs?.length || 1)), 240);
+      break;
+    case 'gameover':
+      sfx.gameOver();
+      startShake(cameraState, 0.4, 480);
+      break;
   }
 });
 
@@ -103,7 +112,7 @@ bindKeyboard({
   onView: (preset) => applyPreset(cameraState, pit, preset),
 });
 
-// 사용자 첫 입력 시 AudioContext 잠금 해제 — autoplay 정책 회피.
+// 첫 사용자 입력 시 AudioContext unlock.
 const unlockOnce = () => {
   unlockAudio();
   window.removeEventListener('keydown', unlockOnce, true);
@@ -136,6 +145,7 @@ function tick(now) {
     updateGhostGroup(ghostGroup, game.current, pit);
     game.dirty = false;
   }
+  updateEffects(effects, now);
   updateCameraControls(cameraState, now);
   renderer.render(scene, camera);
   requestAnimationFrame(tick);

@@ -1,4 +1,4 @@
-// OrbitControls 기반의 카메라 컨트롤. 뷰 프리셋 / 부드러운 보간 / 카메라 yaw 기준 이동 변환.
+// OrbitControls 기반의 카메라 컨트롤. 뷰 프리셋 / 부드러운 보간 / 카메라 yaw 기준 이동 변환 / 카메라 흔들림.
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -8,9 +8,7 @@ const TWEEN_MS = 600;
 // (azimuth, polar) — three.js Spherical 규약: polar 는 +Y 축에서 잰 각, azimuth 는 +Z 축에서 +X 쪽으로.
 // distMul 은 모두 1.4 ~ 1.6 — 화면이 거의 꽉 차도록.
 const PRESETS = {
-  // ISO azimuth = 30° (π/6). 45° 일 때 +X / +Z 가 화면에서 거의 같은 방향이라 화살표가 헷갈리던 문제 해소.
   iso:   { az: Math.PI / 6,    polar: Math.PI * 0.30, distMul: 1.55 },
-  // Top 은 polar 를 살짝 키움 (0.05 → 0.20π). 4 측벽이 충분히 보여 깊이감 유지.
   top:   { az: Math.PI / 6,    polar: Math.PI * 0.20, distMul: 1.40 },
   front: { az: 0,              polar: Math.PI * 0.45, distMul: 1.60 },
   side:  { az: Math.PI / 2,    polar: Math.PI * 0.45, distMul: 1.60 },
@@ -25,9 +23,14 @@ export function createCameraControls(camera, dom, pit) {
   controls.rotateSpeed = 0.85;
   controls.screenSpacePanning = false;
   controls.minPolarAngle = 0.05;
-  controls.maxPolarAngle = Math.PI * 0.49; // 바닥 아래로 못 가도록.
+  controls.maxPolarAngle = Math.PI * 0.49;
 
-  const state = { camera, controls, tween: null };
+  const state = {
+    camera, controls,
+    tween: null,
+    shake: null,         // { mag, t0, dur }
+    shakeOffset: null,   // 이번 frame 적용된 offset (다음 frame 에서 빼고 새로 적용)
+  };
   configureForPit(state, pit);
   return state;
 }
@@ -72,10 +75,21 @@ function startTween(state, toPos, toTgt) {
     t0: performance.now(),
     dur: TWEEN_MS,
   };
-  state.controls.enabled = false; // 보간 중 사용자 입력 차단
+  state.controls.enabled = false;
+}
+
+export function startShake(state, magnitude = 0.15, durationMs = 220) {
+  state.shake = { mag: magnitude, t0: performance.now(), dur: durationMs };
 }
 
 export function updateCameraControls(state, now) {
+  // 1) 이전 frame 의 shake offset 제거 — 깨끗한 위치에서 controls.update() 가 동작하도록.
+  if (state.shakeOffset) {
+    state.camera.position.sub(state.shakeOffset);
+    state.shakeOffset = null;
+  }
+
+  // 2) tween 또는 OrbitControls update.
   const tween = state.tween;
   if (tween) {
     const t = Math.min(1, (now - tween.t0) / tween.dur);
@@ -90,22 +104,36 @@ export function updateCameraControls(state, now) {
   } else {
     state.controls.update();
   }
+
+  // 3) 이번 frame 의 shake offset 추가.
+  if (state.shake) {
+    const elapsed = now - state.shake.t0;
+    if (elapsed >= state.shake.dur) {
+      state.shake = null;
+    } else {
+      const t = elapsed / state.shake.dur;
+      const decay = (1 - t) * (1 - t); // ease-out quad
+      const m = state.shake.mag * decay;
+      state.shakeOffset = new THREE.Vector3(
+        (Math.random() - 0.5) * 2 * m,
+        (Math.random() - 0.5) * 2 * m,
+        (Math.random() - 0.5) * 2 * m,
+      );
+      state.camera.position.add(state.shakeOffset);
+    }
+  }
 }
 
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 
-// 화살표 키를 카메라 방위에 맞춰 pit 정수 (dx, dz) 한 칸 이동으로 변환.
-// 카메라 right / forward 벡터를 XZ 평면으로 투영한 뒤 가까운 축으로 snap 한다.
 const _right = new THREE.Vector3();
 const _up = new THREE.Vector3();
 const _back = new THREE.Vector3();
 
 export function screenArrowToPit(camera, code) {
   camera.matrixWorld.extractBasis(_right, _up, _back);
-  // back 의 반대가 forward.
   const fX = -_back.x, fZ = -_back.z;
   const rX = _right.x, rZ = _right.z;
-
   let vx = 0, vz = 0;
   switch (code) {
     case 'ArrowLeft':  vx = -rX; vz = -rZ; break;

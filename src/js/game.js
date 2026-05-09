@@ -1,11 +1,11 @@
 // 게임 상태 머신. tryMove / tryRotate / hardDrop / start / pause / reset 만 노출하고,
-// 변경은 emit(type) 으로 알린다. type 에 따라 main.js 가 SFX 를 재생.
+// 변경은 emit(type) 으로 알린다. type 에 따라 main.js 가 SFX / 파티클 / 화면 흔들림을 재생.
 
 import { pickRandomBlock } from './blocksets.js';
 import { saveHighScore, loadStats, saveStats } from './storage.js';
 
 const SPEED_BASE_MS = {
-  antigravity: Infinity, // 자동 드롭 없음 — 사용자가 Space (hard drop) 으로 직접 떨어뜨려야 함.
+  antigravity: Infinity, // 자동 드롭 없음 — 사용자가 Space 로 직접 떨어뜨려야 함.
   slow: 3000,
   medium: 2000,
   fast: 1200,
@@ -14,7 +14,7 @@ const LAYER_BONUS = [0, 100, 250, 450, 700, 1000];
 const LINES_PER_LEVEL = 5;
 const MAX_LEVEL = 19;
 
-// 회전 시 wall-kick 시도 offsets — 빈 공간이라면 거의 항상 회전할 수 있도록
+// 회전 시 wall-kick offsets — 빈 공간이라면 거의 항상 회전할 수 있도록
 // dy = -1..+3, dx/dz = -2..+2 의 124 offsets 을 가까운 거리 순으로 정렬.
 const ROT_KICKS = (() => {
   const range = 2;
@@ -31,7 +31,7 @@ const ROT_KICKS = (() => {
     const da = Math.abs(a[0]) + Math.abs(a[1]) + Math.abs(a[2]);
     const db = Math.abs(b[0]) + Math.abs(b[1]) + Math.abs(b[2]);
     if (da !== db) return da - db;
-    if (a[1] !== b[1]) return b[1] - a[1]; // +y 우선 (천장 위로 들어올렸다가 다시 내려오는 패턴)
+    if (a[1] !== b[1]) return b[1] - a[1]; // +y 우선
     return 0;
   });
   return offs;
@@ -59,6 +59,7 @@ export class Game {
     this.current = null;
     this.next = null;
     this.bestComboThisGame = 0;
+    this.lastClearedYs = [];
     this.dirty = true;
     this.listeners = new Set();
   }
@@ -114,6 +115,7 @@ export class Game {
     this.current = null;
     this.next = null;
     this.bestComboThisGame = 0;
+    this.lastClearedYs = [];
     this.state = 'idle';
     if (this.pit?.cells) this.pit.cells.fill(0);
     this.dirty = true;
@@ -171,8 +173,6 @@ export class Game {
     if (this.state !== 'running' || !this.current) return false;
     const c = this.current.clone();
     c.rotate(axis, dir);
-
-    // 1) pit boundary 바깥으로 튀어 나간 셀이 있으면 안쪽으로 강제 평행이동.
     fitInsidePit(c, this.pit);
     if (this.pit.canPlace(c.absCells())) {
       this.current = c;
@@ -180,8 +180,6 @@ export class Game {
       this.emit('rotate');
       return true;
     }
-
-    // 2) 그래도 안 되면 가까운 거리 순으로 wall-kick 시도. 빈 공간이면 이 단계에서 거의 성공.
     for (const [dx, dy, dz] of ROT_KICKS) {
       c.translate(dx, dy, dz);
       if (this.pit.canPlace(c.absCells())) {
@@ -216,7 +214,7 @@ export class Game {
     this.lockAndSpawn();
   }
 
-  // 자동 드롭 한 칸. tryMove 와 분리된 emit('fall') — sfx 로 재생하지 않음.
+  // 자동 드롭 한 칸. 'fall' 이벤트는 sfx 로 재생하지 않음.
   stepDown() {
     if (!this.current) return;
     const c = this.current.clone();
@@ -239,8 +237,10 @@ export class Game {
     this.dirty = true;
     this.emit('lock');
 
-    const cleared = this.pit.clearFullLayers();
+    const clearedYs = this.pit.clearFullLayers();
+    const cleared = clearedYs.length;
     if (cleared > 0) {
+      this.lastClearedYs = clearedYs;
       this.layers += cleared;
       if (cleared > this.bestComboThisGame) this.bestComboThisGame = cleared;
       this.score += LAYER_BONUS[Math.min(cleared, LAYER_BONUS.length - 1)];
@@ -254,7 +254,6 @@ export class Game {
   gameOver() {
     this.state = 'gameover';
     saveHighScore(this.score);
-    // 누적 통계 갱신.
     const s = loadStats();
     s.games = (s.games || 0) + 1;
     s.totalCubes = (s.totalCubes || 0) + this.cubes;
@@ -271,7 +270,6 @@ export class Game {
 }
 
 // 회전 후 셀 BBox 가 pit X / Z 외부로 나갔거나 음의 Y 면 안쪽으로 자동 평행이동.
-// 천장 위(y >= height) 는 그대로 둠 — 큰 polycube 가 스폰 직후 일시적으로 천장 위에 걸칠 수 있음.
 function fitInsidePit(block, pit) {
   let mnX = Infinity, mnY = Infinity, mnZ = Infinity;
   let mxX = -Infinity, mxZ = -Infinity;
