@@ -1,13 +1,15 @@
-// pit 외곽선 + 4 측벽 격자 + 쌓인 셀 InstancedMesh + 떨어지는 블럭 그룹(와이어프레임 + 벽 그림자).
+// pit 외곽선 + 4 측벽 격자 + 쌓인 셀 InstancedMesh + 떨어지는 블럭 그룹(와이어프레임 + 벽 그림자) + ghost block.
 
 import * as THREE from 'three';
 import { PALETTE, layerColorHex } from './blocksets.js';
 
 const CELL = 1;
 const WIRE_COLOR = 0xffffff;            // 떨어지는 블럭 와이어프레임은 흰색 통일.
-const SHADOW_OPACITY = 0.45;            // 벽면 그림자 투명도.
-const GAP_EPS = 0.002;                  // 격자가 박스와 z-fighting 안 나도록 안쪽으로 살짝.
-const SHADOW_EPS = 0.012;               // 그림자가 격자보다 더 안쪽.
+const SHADOW_OPACITY = 0.45;
+const GAP_EPS = 0.002;
+const SHADOW_EPS = 0.012;
+const GHOST_COLOR = 0xfff366;           // hard-drop 위치를 표시하는 ghost 색.
+const GHOST_OPACITY = 0.55;
 
 export function createPitMesh(pit) {
   const group = new THREE.Group();
@@ -36,36 +38,26 @@ export function createPitMesh(pit) {
   floor.position.set(w / 2, 0, d / 2);
   group.add(floor);
 
-  // 바닥 + 4 측벽 격자.
   group.add(buildPitGrid(pit));
-
   return group;
 }
 
-// 바닥 / X=0 / X=w / Z=0 / Z=d 다섯 면에 셀 격자 라인을 그린다.
-// 떨어지는 블럭의 위치를 측면에서도 직관적으로 파악할 수 있게 하기 위함.
 function buildPitGrid(pit) {
   const w = pit.width, d = pit.depth, h = pit.height;
   const e = GAP_EPS;
   const v = [];
 
-  // 바닥 (y = 0)
+  // 바닥
   for (let x = 0; x <= w; x++) v.push(x, e, 0,  x, e, d);
   for (let z = 0; z <= d; z++) v.push(0, e, z,  w, e, z);
 
-  // X = 0 측벽
+  // 4 측벽
   for (let z = 0; z <= d; z++) v.push(e, 0, z,  e, h, z);
   for (let y = 0; y <= h; y++) v.push(e, y, 0,  e, y, d);
-
-  // X = w 측벽
   for (let z = 0; z <= d; z++) v.push(w - e, 0, z,  w - e, h, z);
   for (let y = 0; y <= h; y++) v.push(w - e, y, 0,  w - e, y, d);
-
-  // Z = 0 측벽
   for (let x = 0; x <= w; x++) v.push(x, 0, e,  x, h, e);
   for (let y = 0; y <= h; y++) v.push(0, y, e,  w, y, e);
-
-  // Z = d 측벽
   for (let x = 0; x <= w; x++) v.push(x, 0, d - e,  x, h, d - e);
   for (let y = 0; y <= h; y++) v.push(0, y, d - e,  w, y, d - e);
 
@@ -116,20 +108,16 @@ export function updateCellsMesh(mesh, pit) {
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
 }
 
-// 떨어지는 블럭 그룹: (1) 흰색 셀 와이어프레임, (2) X=0 / Z=0 두 벽면의 X-Z 단면 그림자.
-// 셀 위치가 바뀔 때마다 자식들을 dispose 후 재구성한다.
+// 떨어지는 블럭 그룹: (1) 흰 셀 와이어프레임, (2) X=0 / Z=0 두 벽면의 X-Z 단면 그림자.
 export function createCurrentBlockGroup() {
   const group = new THREE.Group();
   group.name = 'current-block';
   return group;
 }
 
-// 한 번만 만들고 모든 그림자에서 공유. dispose 하지 않는다.
 const SHADOW_PLANE_GEOM = new THREE.PlaneGeometry(0.92, 0.92);
 
 export function updateCurrentBlockGroup(group, block) {
-  // 기존 자식 정리. wire geometry 와 모든 material 은 매번 새로 만들었으므로 dispose 한다.
-  // 공유 SHADOW_PLANE_GEOM 은 dispose 대상에서 제외.
   while (group.children.length > 0) {
     const c = group.children.pop();
     if (c.userData.disposeGeometry) c.geometry?.dispose?.();
@@ -140,7 +128,7 @@ export function updateCurrentBlockGroup(group, block) {
   const cells = block.absCells();
   const blockHex = PALETTE[block.colorIdx]?.hex ?? 0xffffff;
 
-  // (1) 와이어프레임 — 모든 셀 외곽선.
+  // (1) 와이어프레임
   const verts = [];
   for (const [x, y, z] of cells) pushCubeEdges(verts, x, y, z);
   if (verts.length > 0) {
@@ -152,8 +140,7 @@ export function updateCurrentBlockGroup(group, block) {
     group.add(wires);
   }
 
-  // (2) 벽면 그림자 — X=0 측면 (yz 평면) 과 Z=0 측면 (xy 평면).
-  // 같은 (y,z) / (x,y) 쌍은 한 번만 그린다.
+  // (2) 두 벽면 그림자
   const xWallSeen = new Set();
   const zWallSeen = new Set();
   const shadowMat = new THREE.MeshBasicMaterial({
@@ -163,13 +150,12 @@ export function updateCurrentBlockGroup(group, block) {
     side: THREE.DoubleSide,
     depthWrite: false,
   });
-
   for (const [x, y, z] of cells) {
     const ky = `${y},${z}`;
     if (!xWallSeen.has(ky)) {
       xWallSeen.add(ky);
       const m = new THREE.Mesh(SHADOW_PLANE_GEOM, shadowMat);
-      m.rotation.y = Math.PI / 2;       // plane normal 을 +X 방향으로
+      m.rotation.y = Math.PI / 2;
       m.position.set(SHADOW_EPS, y + 0.5, z + 0.5);
       group.add(m);
     }
@@ -177,26 +163,64 @@ export function updateCurrentBlockGroup(group, block) {
     if (!zWallSeen.has(kx)) {
       zWallSeen.add(kx);
       const m = new THREE.Mesh(SHADOW_PLANE_GEOM, shadowMat);
-      // 기본 plane 은 xy 평면(normal = +Z) — 회전 없이 그대로 사용
       m.position.set(x + 0.5, y + 0.5, SHADOW_EPS);
       group.add(m);
     }
   }
 }
 
-// 셀 (x,y,z) 의 12 edge 좌표를 verts 에 push. 인접 셀과의 z-fighting 회피용으로 살짝 안쪽 inset.
+// ghost group: 현재 블럭이 hard-drop 시 멈출 위치를 노란 wireframe 으로 표시.
+export function createGhostGroup() {
+  const g = new THREE.Group();
+  g.name = 'ghost';
+  return g;
+}
+
+export function updateGhostGroup(group, block, pit) {
+  while (group.children.length > 0) {
+    const c = group.children.pop();
+    c.geometry?.dispose?.();
+    c.material?.dispose?.();
+  }
+  if (!block || !pit) return;
+
+  // hard-drop 위치 시뮬레이션.
+  const ghost = block.clone();
+  while (true) {
+    ghost.translate(0, -1, 0);
+    if (!pit.canPlace(ghost.absCells())) {
+      ghost.translate(0, 1, 0);
+      break;
+    }
+  }
+  // 이미 바닥 직전(현재 위치와 동일)이면 ghost 미표시.
+  if (ghost.position[1] === block.position[1]) return;
+
+  const verts = [];
+  for (const [x, y, z] of ghost.absCells()) pushCubeEdges(verts, x, y, z);
+  if (verts.length === 0) return;
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  const mat = new THREE.LineBasicMaterial({
+    color: GHOST_COLOR,
+    transparent: true,
+    opacity: GHOST_OPACITY,
+    depthWrite: false,
+  });
+  group.add(new THREE.LineSegments(geo, mat));
+}
+
+// 셀 (x,y,z) 의 12 edge 좌표를 verts 에 push. 인접 셀과 z-fighting 회피용으로 살짝 안쪽 inset.
 function pushCubeEdges(out, x, y, z) {
   const a = 0.04, b = 0.96;
   const X = [x + a, x + b], Y = [y + a, y + b], Z = [z + a, z + b];
-  // X 방향 edges (각 yz 코너에서 X[0]→X[1])
   for (let yi = 0; yi < 2; yi++) for (let zi = 0; zi < 2; zi++) {
     out.push(X[0], Y[yi], Z[zi], X[1], Y[yi], Z[zi]);
   }
-  // Y 방향 edges
   for (let xi = 0; xi < 2; xi++) for (let zi = 0; zi < 2; zi++) {
     out.push(X[xi], Y[0], Z[zi], X[xi], Y[1], Z[zi]);
   }
-  // Z 방향 edges
   for (let xi = 0; xi < 2; xi++) for (let yi = 0; yi < 2; yi++) {
     out.push(X[xi], Y[yi], Z[0], X[xi], Y[yi], Z[1]);
   }

@@ -1,11 +1,13 @@
-// 키보드 입력. Game 의 의도 메서드만 호출한다.
-// 이동 키(화살표)에는 DAS 스타일 키 리피트를 적용. 회전 / 드롭에는 미적용.
+// 키보드 입력. Game 의 의도 메서드와 카메라 프리셋 콜백을 호출한다.
+// 화살표 이동은 카메라 yaw 에 따라 화면 기준 방향으로 매핑된다 (Phase 2).
+
+import { screenArrowToPit } from './cameraControls.js';
 
 const KEY_MAP = {
-  ArrowLeft:  { kind: 'move', dx: -1, dz: 0,  repeat: true },
-  ArrowRight: { kind: 'move', dx:  1, dz: 0,  repeat: true },
-  ArrowUp:    { kind: 'move', dx:  0, dz: -1, repeat: true },
-  ArrowDown:  { kind: 'move', dx:  0, dz:  1, repeat: true },
+  ArrowLeft:  { kind: 'move', code: 'ArrowLeft',  repeat: true },
+  ArrowRight: { kind: 'move', code: 'ArrowRight', repeat: true },
+  ArrowUp:    { kind: 'move', code: 'ArrowUp',    repeat: true },
+  ArrowDown:  { kind: 'move', code: 'ArrowDown',  repeat: true },
   Space:      { kind: 'drop' },
   KeyQ:       { kind: 'rot', axis: 'x', dir:  1 },
   KeyA:       { kind: 'rot', axis: 'x', dir: -1 },
@@ -16,13 +18,17 @@ const KEY_MAP = {
   KeyB:       { kind: 'start' },
   KeyP:       { kind: 'pause' },
   Escape:     { kind: 'stop' },
+  Digit1:     { kind: 'view', preset: 'top' },
+  Digit2:     { kind: 'view', preset: 'iso' },
+  Digit3:     { kind: 'view', preset: 'front' },
+  Digit4:     { kind: 'view', preset: 'side' },
 };
 
 const REPEAT_DELAY_MS = 220;
 const REPEAT_INTERVAL_MS = 70;
 
-export function bindKeyboard({ game }) {
-  const repeats = new Map(); // ev.code -> { kind: 'timeout' | 'interval', id }
+export function bindKeyboard({ game, camera, onView }) {
+  const repeats = new Map();
 
   function clearRepeat(code) {
     const r = repeats.get(code);
@@ -31,19 +37,21 @@ export function bindKeyboard({ game }) {
     else clearInterval(r.id);
     repeats.delete(code);
   }
-
-  function clearAllRepeats() {
-    for (const code of [...repeats.keys()]) clearRepeat(code);
-  }
+  function clearAllRepeats() { for (const code of [...repeats.keys()]) clearRepeat(code); }
 
   function runAction(action) {
     switch (action.kind) {
-      case 'move':  game.tryMove(action.dx, 0, action.dz); break;
+      case 'move': {
+        const [dx, dz] = camera ? screenArrowToPit(camera, action.code) : [0, 0];
+        if (dx || dz) game.tryMove(dx, 0, dz);
+        break;
+      }
       case 'drop':  game.hardDrop(); break;
       case 'rot':   game.tryRotate(action.axis, action.dir); break;
       case 'start': game.start(); break;
       case 'pause': game.pause(); break;
       case 'stop':  game.reset(); break;
+      case 'view':  onView?.(action.preset); break;
     }
   }
 
@@ -51,7 +59,7 @@ export function bindKeyboard({ game }) {
     const action = KEY_MAP[ev.code];
     if (!action) return;
     if (ev.code.startsWith('Arrow') || ev.code === 'Space') ev.preventDefault();
-    if (ev.repeat) return; // OS 키 리피트는 무시 (직접 관리)
+    if (ev.repeat) return;
 
     runAction(action);
 

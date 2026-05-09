@@ -6,11 +6,17 @@ import {
   createPitMesh,
   createCellsMesh, updateCellsMesh,
   createCurrentBlockGroup, updateCurrentBlockGroup,
+  createGhostGroup, updateGhostGroup,
 } from './renderer.js';
 import { createNextPreview } from './nextPreview.js';
 import { Game } from './game.js';
 import { bindUI, readOptions } from './ui.js';
 import { bindKeyboard } from './controls.js';
+import {
+  createCameraControls, configureForPit, applyPreset,
+  applyCameraView, readCameraView, updateCameraControls,
+} from './cameraControls.js';
+import { loadCameraView, saveCameraView } from './storage.js';
 
 const canvas = document.getElementById('game-canvas');
 const stage = canvas.parentElement;
@@ -23,10 +29,13 @@ let pit = new Pit(...parsePitDims(readOptions().pit));
 let pitMesh = createPitMesh(pit);
 let cellsMesh = createCellsMesh(pit);
 let currentGroup = createCurrentBlockGroup();
-scene.add(pitMesh);
-scene.add(cellsMesh);
-scene.add(currentGroup);
-positionIsoCamera(camera, pit);
+let ghostGroup = createGhostGroup();
+scene.add(pitMesh, cellsMesh, currentGroup, ghostGroup);
+
+const cameraState = createCameraControls(camera, canvas, pit);
+if (!applyCameraView(cameraState, loadCameraView())) {
+  applyPreset(cameraState, pit, 'iso', /* instant */ true);
+}
 
 const nextPreview = createNextPreview(nextCanvas);
 
@@ -44,22 +53,35 @@ bindUI({
   game,
   onPitChange: (pitId) => {
     const dims = parsePitDims(pitId);
-    scene.remove(pitMesh);
-    scene.remove(cellsMesh);
-    scene.remove(currentGroup);
+    scene.remove(pitMesh, cellsMesh, currentGroup, ghostGroup);
     pit = new Pit(...dims);
     pitMesh = createPitMesh(pit);
     cellsMesh = createCellsMesh(pit);
     currentGroup = createCurrentBlockGroup();
-    scene.add(pitMesh);
-    scene.add(cellsMesh);
-    scene.add(currentGroup);
-    positionIsoCamera(camera, pit);
+    ghostGroup = createGhostGroup();
+    scene.add(pitMesh, cellsMesh, currentGroup, ghostGroup);
+    configureForPit(cameraState, pit);
+    applyPreset(cameraState, pit, 'iso');
     game.setPit(pit);
   },
+  onView: (preset) => applyPreset(cameraState, pit, preset),
 });
 
-bindKeyboard({ game });
+bindKeyboard({
+  game,
+  camera,
+  onView: (preset) => applyPreset(cameraState, pit, preset),
+});
+
+// 카메라 변경(드래그/휠/패닝)을 throttle 해서 저장.
+let lastSaveT = 0;
+cameraState.controls.addEventListener('change', () => {
+  const t = performance.now();
+  if (t - lastSaveT > 500) {
+    lastSaveT = t;
+    saveCameraView(readCameraView(cameraState));
+  }
+});
 
 const resizeObserver = new ResizeObserver(() => fitToContainer(renderer, camera, stage));
 resizeObserver.observe(stage);
@@ -73,25 +95,15 @@ function tick(now) {
   if (game.dirty) {
     updateCellsMesh(cellsMesh, pit);
     updateCurrentBlockGroup(currentGroup, game.current);
+    updateGhostGroup(ghostGroup, game.current, pit);
     game.dirty = false;
   }
+  updateCameraControls(cameraState, now);
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);
 
-// ----- helpers -----
-
 function parsePitDims(s) {
   return s.split('x').map((n) => parseInt(n, 10));
-}
-
-// 카메라가 X+ Z+ 코너 위쪽에 위치 → 화면에서 보이는 안쪽 두 벽이 X=0, Z=0 (그림자 벽).
-function positionIsoCamera(camera, pit) {
-  const cx = pit.width / 2;
-  const cz = pit.depth / 2;
-  const cy = pit.height / 2;
-  const r = Math.max(pit.width, pit.depth, pit.height) * 1.6;
-  camera.position.set(cx + r, cy + r * 0.9, cz + r);
-  camera.lookAt(cx, cy * 0.6, cz);
 }

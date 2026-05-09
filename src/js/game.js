@@ -4,14 +4,16 @@
 import { pickRandomBlock } from './blocksets.js';
 import { saveHighScore } from './storage.js';
 
-const SPEED_BASE_MS = { slow: 900, medium: 600, fast: 350 };
+// 드롭 간격 — 사용자 피드백 반영하여 전체적으로 느리게 (이전 900/600/350 → 1500/1000/600).
+const SPEED_BASE_MS = { slow: 1500, medium: 1000, fast: 600 };
 const LAYER_BONUS = [0, 100, 250, 450, 700, 1000];
 const LINES_PER_LEVEL = 5;
 const MAX_LEVEL = 19;
 
 export function dropIntervalMs(speed, level) {
   const base = SPEED_BASE_MS[speed] ?? SPEED_BASE_MS.medium;
-  const factor = Math.max(0.18, 1 - level * 0.13);
+  // 레벨업이 너무 가팔라지지 않게 — level=4 에서도 base 의 60%.
+  const factor = Math.max(0.30, 1 - level * 0.10);
   return base * factor;
 }
 

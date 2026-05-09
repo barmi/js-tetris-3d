@@ -119,14 +119,15 @@ Phase 0 (기반)  →  Phase 1 (Blockout 클론)  →  Phase 2 (자유 카메라
 
 목표: 떨어지는 블록의 X-Z 위치를 직관적으로 파악할 수 있도록, 사용자가 임의 각도에서 pit 을 관찰할 수 있다.
 
-- [ ] `OrbitControls` (`three/addons/controls/OrbitControls.js`) 도입
-- [ ] 회전 / 줌 / 패닝의 합리적 limits (pit 안쪽으로 들어가지 못하도록)
-- [ ] 뷰 프리셋 단축키: 1=Top, 2=ISO, 3=Front, 4=Side
-- [ ] 더블 클릭 시 프리셋으로 부드러운 보간(애니메이션)
-- [ ] 카메라 회전 중에도 게임 입력은 정상 동작 (좌/우/앞/뒤 이동은 카메라 yaw 기준)
-- [ ] **낙하 가이드**: 현재 블록의 X-Z 단면을 바닥에 투영하는 그림자 / 고스트
-- [ ] **수직 가이드 라인**: 블록 셀에서 바닥까지 떨어지는 점선
-- [ ] 카메라 상태 / 가이드 표시 여부를 `localStorage` 에 저장
+- [x] `OrbitControls` (`three/addons/controls/OrbitControls.js`) 도입 + damping 0.08
+- [x] 회전 / 줌 / 패닝의 합리적 limits — `minDistance ≈ 0.9·span`, `maxDistance ≈ 5·span`, polar `0.05~0.49π` (바닥 아래 차단)
+- [x] 뷰 프리셋 단축키 1=Top / 2=ISO / 3=Front / 4=Side + 우측 패널 버튼
+- [x] 프리셋 전환 시 ease-out-cubic 보간 (600 ms, 보간 중 사용자 입력 비활성). 페이지 첫 진입은 `instant=true` 로 즉시 배치
+- [x] 카메라 yaw 기준 화살표 이동 — 카메라 right / forward 벡터를 XZ 로 투영 후 가까운 축으로 snap (`screenArrowToPit`)
+- [x] **낙하 가이드**: hard-drop 시 멈출 위치를 노란색 wireframe ghost block 으로 표시
+- [-] (생략) 수직 가이드 점선 — ghost block 이 동등한 정보를 더 깔끔하게 전달하므로 보류
+- [x] 카메라 상태(`{px,py,pz,tx,ty,tz}`) `localStorage` 에 저장 — `controls.change` 이벤트를 500 ms throttle
+- [x] 사용자 피드백 반영 — 드롭 속도 완화: base `slow/medium/fast = 1500 / 1000 / 600 ms`, level factor `max(0.30, 1 − 0.10·level)`
 
 ---
 

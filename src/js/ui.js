@@ -1,5 +1,4 @@
-// 우측 옵션 패널 / 상단 HUD / 중앙 오버레이 바인딩.
-// pit 변경은 onPitChange 콜백으로 main.js 에 위임 (메쉬 재생성 필요).
+// 우측 옵션 패널 / 상단 HUD / 중앙 오버레이 + View 프리셋 버튼 바인딩.
 
 import { saveOption, loadOptions, loadHighScore } from './storage.js';
 
@@ -13,13 +12,11 @@ export function readOptions() {
   };
 }
 
-export function bindUI({ game, onPitChange, onOptionsChange }) {
-  // 저장된 옵션을 라디오에 반영.
+export function bindUI({ game, onPitChange, onOptionsChange, onView }) {
   const opts = readOptions();
   for (const k of ['speed', 'level', 'pit', 'blockset']) writeRadio(k, opts[k]);
   game.applyOptions(opts);
 
-  // 옵션 라디오 변경.
   document.querySelectorAll('.panel-group[data-option]').forEach((g) => {
     const name = g.getAttribute('data-option');
     g.addEventListener('change', (ev) => {
@@ -36,12 +33,17 @@ export function bindUI({ game, onPitChange, onOptionsChange }) {
     });
   });
 
-  // 액션 버튼.
   document.querySelector('[data-action="start"]')?.addEventListener('click', () => game.start());
   document.querySelector('[data-action="pause"]')?.addEventListener('click', () => game.pause());
   document.querySelector('[data-action="reset"]')?.addEventListener('click', () => game.reset());
 
-  // HUD 갱신.
+  document.querySelectorAll('[data-view]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const preset = btn.getAttribute('data-view');
+      onView?.(preset);
+    });
+  });
+
   game.on(() => updateHud(game));
   updateHud(game);
 }
@@ -64,7 +66,7 @@ function updateHud(game) {
   overlay.hidden = false;
   if (game.state === 'idle') {
     title.textContent = 'Press B to start';
-    body.textContent = '화살표 = 이동 · QWE/ASD = 회전 · Space = 드롭 · P = 일시정지';
+    body.textContent = '화살표 = 이동(카메라 기준) · QWE/ASD = 회전 · Space = 드롭 · 1/2/3/4 = 시점 · P = 일시정지';
   } else if (game.state === 'paused') {
     title.textContent = 'Paused';
     body.textContent = 'P 키로 재개';

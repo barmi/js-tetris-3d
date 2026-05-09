@@ -43,7 +43,7 @@
       <div class="stage-overlay" data-overlay hidden>
         <div class="overlay-card">
           <h2 data-overlay-title>Press B to start</h2>
-          <p data-overlay-body>화살표 = 이동 · QWE/ASD = 회전 · Space = 드롭 · P = 일시정지</p>
+          <p data-overlay-body>화살표 = 이동(카메라 기준) · QWE/ASD = 회전 · Space = 드롭 · 1/2/3/4 = 시점 · P = 일시정지</p>
         </div>
       </div>
     </section>
@@ -89,6 +89,17 @@
         <button type="button" data-action="pause">Pause (P)</button>
         <button type="button" data-action="reset">Reset</button>
       </div>
+
+      <fieldset class="panel-group">
+        <legend>View (1 / 2 / 3 / 4)</legend>
+        <div class="panel-views">
+          <button type="button" data-view="top">Top</button>
+          <button type="button" data-view="iso">ISO</button>
+          <button type="button" data-view="front">Front</button>
+          <button type="button" data-view="side">Side</button>
+        </div>
+        <p class="panel-hint">마우스 드래그 = 회전 · 휠 = 줌 · Shift + 드래그 = 패닝</p>
+      </fieldset>
 
       <div class="panel-next">
         <h3>Next</h3>

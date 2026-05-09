@@ -236,6 +236,30 @@ body {
   border-radius: 4px;
 }
 
+/* ---------- View preset buttons ---------- */
+.panel-views {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.panel-views button {
+  padding: 6px 4px;
+  background: var(--bg-elev);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+
+.panel-views button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* ---------- Mobile ---------- */
 @media (max-width: 720px) {
   .layout {
