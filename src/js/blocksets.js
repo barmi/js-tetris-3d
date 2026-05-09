@@ -1,10 +1,9 @@
-// 색 팔레트 + FLAT / BASIC / EXTENDED 블록 세트 정의.
-// 정확한 레퍼런스 블록 목록은 doc/PLAN.md "미해결 / 확인 필요" 항목 참고.
+// 색 팔레트(표준 / 색맹 친화) + FLAT / BASIC / EXTENDED 블록 세트 정의.
 
 import { Block } from './block.js';
 
-// 블럭 ID 별 강조색. 다음 블럭 미리보기, 떨어지는 블럭의 벽면 그림자에 사용.
-export const PALETTE = [
+// 기본 (다채로운).
+const PALETTE_STD = [
   null,
   { hex: 0xe74c3c }, // 1: red
   { hex: 0xf1c40f }, // 2: yellow
@@ -15,26 +14,49 @@ export const PALETTE = [
   { hex: 0x1abc9c }, // 7: teal
   { hex: 0xff5d8f }, // 8: pink
 ];
-
-// 쌓인 블럭의 Y(높이)에 따른 색. 한 층마다 색이 바뀐다 — 누적 패턴을 한눈에 파악하기 위함.
-// pit 의 height 를 넘기면 이 배열을 순환한다.
-export const LAYER_COLORS = [
-  0xe74c3c, // 0: red
-  0xe67e22, // 1: orange
-  0xf1c40f, // 2: yellow
-  0x2ecc71, // 3: green
-  0x1abc9c, // 4: teal
-  0x3498db, // 5: blue
-  0x9b59b6, // 6: purple
-  0xff5d8f, // 7: pink
+const LAYER_COLORS_STD = [
+  0xe74c3c, 0xe67e22, 0xf1c40f, 0x2ecc71,
+  0x1abc9c, 0x3498db, 0x9b59b6, 0xff5d8f,
 ];
 
-export function layerColorHex(y) {
-  const n = LAYER_COLORS.length;
-  return LAYER_COLORS[((y % n) + n) % n];
+// 색맹 친화 — Okabe-Ito 8색 (https://jfly.uni-koeln.de/color/).
+const PALETTE_CB = [
+  null,
+  { hex: 0xe69f00 }, // 1: orange
+  { hex: 0x56b4e9 }, // 2: sky blue
+  { hex: 0x009e73 }, // 3: bluish green
+  { hex: 0xf0e442 }, // 4: yellow
+  { hex: 0x0072b2 }, // 5: blue
+  { hex: 0xd55e00 }, // 6: vermillion
+  { hex: 0xcc79a7 }, // 7: reddish purple
+  { hex: 0x999999 }, // 8: gray
+];
+const LAYER_COLORS_CB = [
+  0xe69f00, 0x56b4e9, 0x009e73, 0xf0e442,
+  0x0072b2, 0xd55e00, 0xcc79a7, 0x999999,
+];
+
+let activePalette = 'standard';
+
+export function setColorPalette(name) {
+  activePalette = (name === 'colorblind') ? 'colorblind' : 'standard';
+}
+export function getColorPalette() {
+  return activePalette;
 }
 
-// FLAT: 평면 폴리오미노. 모든 셀의 y=0. 클래식 테트리스 7종.
+export function paletteColor(idx) {
+  const p = activePalette === 'colorblind' ? PALETTE_CB : PALETTE_STD;
+  return p[idx];
+}
+
+export function layerColorHex(y) {
+  const arr = activePalette === 'colorblind' ? LAYER_COLORS_CB : LAYER_COLORS_STD;
+  const n = arr.length;
+  return arr[((y % n) + n) % n];
+}
+
+// FLAT: 평면 폴리오미노 — 클래식 7종.
 const FLAT_DEFS = [
   { id: 'I', color: 1, cells: [[0,0,0],[1,0,0],[2,0,0],[3,0,0]] },
   { id: 'O', color: 2, cells: [[0,0,0],[1,0,0],[0,0,1],[1,0,1]] },
@@ -46,18 +68,14 @@ const FLAT_DEFS = [
 ];
 
 // BASIC: FLAT + 직관적인 단순 3D 블럭 3 종.
-// 각 블럭은 평면 도형에 +Y 셀이 한두 개 붙은 형태로, 3D 모양이 한눈에 들어오게 했다.
 const BASIC_DEFS = [
   ...FLAT_DEFS,
-  // 3축이 만나는 모서리 (평면 L 한 쌍 + 위쪽 한 셀)
   { id: 'TRIPOD', color: 8, cells: [[0,0,0],[1,0,0],[0,0,1],[0,1,0]] },
-  // 3-블럭 직선의 한쪽 끝에 +Y 셀
   { id: 'L3D',    color: 1, cells: [[0,0,0],[1,0,0],[2,0,0],[2,1,0]] },
-  // 3-블럭 직선의 가운데에 +Y 셀
   { id: 'T3D',    color: 6, cells: [[0,0,0],[1,0,0],[2,0,0],[1,1,0]] },
 ];
 
-// EXTENDED: BASIC + 더 큰 / 다양한 polycube.
+// EXTENDED: BASIC + 큰 polycube.
 const EXTENDED_DEFS = [
   ...BASIC_DEFS,
   { id: 'CUBE2', color: 2, cells: [
@@ -74,7 +92,6 @@ export const BLOCKSETS = {
   extended: EXTENDED_DEFS,
 };
 
-// 블록의 정규화 후 크기를 계산.
 function defExtents(cells) {
   let mx = 0, my = 0, mz = 0;
   for (const [x, y, z] of cells) {
@@ -90,8 +107,6 @@ function fitsInPit(cells, pit) {
   return sx <= pit.width && sy <= pit.height && sz <= pit.depth;
 }
 
-// pit 이 주어지면 그 pit 에 들어갈 수 있는 블록만 후보로 한다.
-// 들어가는 블록이 하나도 없으면(이론상 없는 상황) 원본 목록에서 그대로 뽑는다.
 export function pickRandomBlock(setId, pit) {
   let defs = BLOCKSETS[setId] ?? BLOCKSETS.basic;
   if (pit) {

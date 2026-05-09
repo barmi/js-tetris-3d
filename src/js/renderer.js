@@ -2,7 +2,7 @@
 
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { PALETTE, layerColorHex } from './blocksets.js';
+import { paletteColor, layerColorHex } from './blocksets.js';
 
 const CELL = 1;
 const WIRE_COLOR = 0xffffff;
@@ -46,11 +46,9 @@ function buildPitGrid(pit) {
   const e = GAP_EPS;
   const v = [];
 
-  // 바닥
   for (let x = 0; x <= w; x++) v.push(x, e, 0,  x, e, d);
   for (let z = 0; z <= d; z++) v.push(0, e, z,  w, e, z);
 
-  // 4 측벽
   for (let z = 0; z <= d; z++) v.push(e, 0, z,  e, h, z);
   for (let y = 0; y <= h; y++) v.push(e, y, 0,  e, y, d);
   for (let z = 0; z <= d; z++) v.push(w - e, 0, z,  w - e, h, z);
@@ -68,15 +66,13 @@ function buildPitGrid(pit) {
   );
 }
 
-// 쌓인 셀 InstancedMesh. 색은 Y(높이) 기반.
-// 셀 사이즈 0.99 — 인접 셀과 거의 갭 없이 붙되 같은 평면 z-fighting 은 회피.
-// 모서리는 RoundedBoxGeometry(radius 0.12) 로 둥글게.
+// 쌓인 셀 InstancedMesh — Y(높이) 기반 색.
 export function createCellsMesh(pit) {
   const geom = new RoundedBoxGeometry(0.99, 0.99, 0.99, 4, 0.12);
   const mat = new THREE.MeshStandardMaterial({
     roughness: 0.55,
     metalness: 0.05,
-    flatShading: false, // 둥근 모서리에 부드러운 셰이딩
+    flatShading: false,
   });
   const max = Math.max(1, pit.width * pit.depth * pit.height);
   const mesh = new THREE.InstancedMesh(geom, mat, max);
@@ -109,8 +105,7 @@ export function updateCellsMesh(mesh, pit) {
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
 }
 
-// 떨어지는 블럭 그룹: (1) 흰 셀 와이어프레임, (2) X=0 / Z=0 두 벽면의 X-Z 단면 그림자.
-// 떨어지는 블럭은 frame 으로만 표시되므로 둥근 모서리는 적용하지 않는다 (직선 wireframe 이 더 또렷).
+// 떨어지는 블럭 그룹 — 흰 와이어프레임 + 두 벽면 그림자.
 export function createCurrentBlockGroup() {
   const group = new THREE.Group();
   group.name = 'current-block';
@@ -128,9 +123,8 @@ export function updateCurrentBlockGroup(group, block) {
   if (!block) return;
 
   const cells = block.absCells();
-  const blockHex = PALETTE[block.colorIdx]?.hex ?? 0xffffff;
+  const blockHex = paletteColor(block.colorIdx)?.hex ?? 0xffffff;
 
-  // (1) 와이어프레임
   const verts = [];
   for (const [x, y, z] of cells) pushCubeEdges(verts, x, y, z);
   if (verts.length > 0) {
@@ -142,7 +136,6 @@ export function updateCurrentBlockGroup(group, block) {
     group.add(wires);
   }
 
-  // (2) 두 벽면 그림자
   const xWallSeen = new Set();
   const zWallSeen = new Set();
   const shadowMat = new THREE.MeshBasicMaterial({
@@ -171,7 +164,7 @@ export function updateCurrentBlockGroup(group, block) {
   }
 }
 
-// ghost group: 현재 블럭이 hard-drop 시 멈출 위치를 노란 wireframe 으로 표시.
+// ghost group: hard-drop 멈춤 위치를 노란 wireframe 으로.
 export function createGhostGroup() {
   const g = new THREE.Group();
   g.name = 'ghost';
@@ -211,7 +204,6 @@ export function updateGhostGroup(group, block, pit) {
   group.add(new THREE.LineSegments(geo, mat));
 }
 
-// 셀 (x,y,z) 의 12 edge 좌표를 verts 에 push. 인접 셀과의 z-fighting 회피용으로 살짝 안쪽 inset.
 function pushCubeEdges(out, x, y, z) {
   const a = 0.04, b = 0.96;
   const X = [x + a, x + b], Y = [y + a, y + b], Z = [z + a, z + b];

@@ -143,15 +143,20 @@ Phase 0 (기반)  →  Phase 1 (Blockout 클론)  →  Phase 2 (자유 카메라
 
 목표: 사용성 / 즐거움 / 재플레이 향상.
 
-- [ ] 사운드: 이동 / 회전 / 클리어 / 게임오버 효과음
-- [ ] 모바일 터치: 스와이프 = 이동, 더블탭 = 드롭, 두 손가락 = 회전
-- [ ] 테마: 라이트 / 다크 / 네온 / 미니멀
-- [ ] 통계: 평균 클리어 / 최장 콤보 / 최다 큐브
-- [ ] 리플레이: 입력 시퀀스 기록 / 재생
-- [ ] 색맹 친화 팔레트 옵션
-- [ ] 화면 흔들림 / 파티클 등 폴리시
-- [ ] PWA / 오프라인 지원
-- [ ] (선택) 레벨별 음악
+- [x] **사운드** — `src/js/audio.js` 신규. WebAudio API 의 `OscillatorNode` 로 합성한 가벼운 SFX (외부 파일 없음): 이동 / 회전 / 드롭 / 락 / 클리어 / 게임오버. on/off 토글, 첫 사용자 입력 시 `AudioContext` unlock
+- [x] **테마** — `dark` / `light` / `neon` / `minimal` 4종. `data-theme` 속성 + CSS 변수 토글, `scene.background` 도 동기화
+- [x] **통계** — `games / totalCubes / totalLines / bestScore / bestCombo` (한 게임 중 한 번에 클리어한 최대 라인). `localStorage`(`js-tetris-3d:stats`) 에 누적, Game Over 화면에 표시
+- [x] **색맹 친화 팔레트** — Okabe-Ito 8색. `setColorPalette('standard'|'colorblind')` 런타임 스위치, 즉시 갱신
+- [ ] **모바일 터치** — `OrbitControls` 와 single-touch 가 충돌해 별도 디자인 필요(가상 D-pad / 영역 분할). 다음 라운드
+- [ ] **리플레이** — 입력 시퀀스 기록 / 재생. 다음 라운드
+- [ ] **화면 흔들림 / 파티클** — 라인 클리어 폴리시. 다음 라운드
+- [ ] **PWA / 오프라인** — CDN three.js 캐싱 정책 정리 필요. 다음 라운드
+- [ ] **레벨별 음악** — 선택 사항, 보류
+
+### 사용자 피드백 3차 (Phase 3 동시 반영)
+
+- [x] **Speed 에 Antigravity 추가** — `dropIntervalMs(antigravity, _) = Infinity`. `update` 가 자동 드롭을 건너뛰고, 사용자가 Space (hard drop) 으로 직접 떨어뜨려야 함. Slow 보다 더 쉬운 모드
+- [x] **회전 강화** — 회전 후 pit boundary 밖 셀이 있으면 자동 평행이동(`fitInsidePit`) 후 충돌 검사 → 이후 ±1 / ±2 / +y 등 124 wall-kick offsets 시도. 빈 공간이라면 거의 무조건 회전 가능, 쌓인 블럭과의 충돌만 남았을 때만 실패
 
 ---
 

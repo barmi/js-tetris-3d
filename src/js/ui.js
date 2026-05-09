@@ -1,6 +1,8 @@
-// 우측 옵션 패널 / 상단 HUD / 중앙 오버레이 + View 프리셋 버튼 바인딩.
+// 우측 옵션 패널 / 상단 HUD / 중앙 오버레이 / View 프리셋 버튼 + Theme/Palette/Sound 옵션.
 
-import { saveOption, loadOptions, loadHighScore } from './storage.js';
+import { saveOption, loadOptions, loadHighScore, loadStats } from './storage.js';
+
+const VALID_THEMES = ['dark', 'light', 'neon', 'minimal'];
 
 export function readOptions() {
   const stored = loadOptions();
@@ -9,13 +11,24 @@ export function readOptions() {
     level:    stored.level    ?? readRadio('level')    ?? '0',
     pit:      stored.pit      ?? readRadio('pit')      ?? '5x5x10',
     blockset: stored.blockset ?? readRadio('blockset') ?? 'basic',
+    theme:    stored.theme    ?? readRadio('theme')    ?? 'dark',
+    palette:  stored.palette  ?? readRadio('palette')  ?? 'standard',
+    sound:    stored.sound    ?? readRadio('sound')    ?? 'on',
   };
 }
 
-export function bindUI({ game, onPitChange, onOptionsChange, onView }) {
+export function bindUI({ game, onPitChange, onOptionsChange, onView, onTheme, onPalette, onSound }) {
   const opts = readOptions();
-  for (const k of ['speed', 'level', 'pit', 'blockset']) writeRadio(k, opts[k]);
+  for (const k of Object.keys(opts)) writeRadio(k, opts[k]);
+
+  // 게임 자체 옵션은 한꺼번에 적용 (theme/palette/sound 는 무시됨).
   game.applyOptions(opts);
+
+  // 시각 옵션 초기 적용.
+  applyTheme(opts.theme);
+  onTheme?.(opts.theme);
+  onPalette?.(opts.palette);
+  onSound?.(opts.sound);
 
   document.querySelectorAll('.panel-group[data-option]').forEach((g) => {
     const name = g.getAttribute('data-option');
@@ -24,10 +37,12 @@ export function bindUI({ game, onPitChange, onOptionsChange, onView }) {
       if (!(t instanceof HTMLInputElement) || t.type !== 'radio') return;
       saveOption(name, t.value);
       opts[name] = t.value;
-      if (name === 'pit') {
-        onPitChange?.(t.value);
-      } else {
-        game.applyOptions({ [name]: t.value });
+      switch (name) {
+        case 'pit':     onPitChange?.(t.value); break;
+        case 'theme':   applyTheme(t.value); onTheme?.(t.value); break;
+        case 'palette': onPalette?.(t.value); break;
+        case 'sound':   onSound?.(t.value); break;
+        default:        game.applyOptions({ [name]: t.value });
       }
       onOptionsChange?.({ ...opts });
     });
@@ -38,14 +53,16 @@ export function bindUI({ game, onPitChange, onOptionsChange, onView }) {
   document.querySelector('[data-action="reset"]')?.addEventListener('click', () => game.reset());
 
   document.querySelectorAll('[data-view]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const preset = btn.getAttribute('data-view');
-      onView?.(preset);
-    });
+    btn.addEventListener('click', () => onView?.(btn.getAttribute('data-view')));
   });
 
   game.on(() => updateHud(game));
   updateHud(game);
+}
+
+function applyTheme(theme) {
+  const t = VALID_THEMES.includes(theme) ? theme : 'dark';
+  document.documentElement.dataset.theme = t;
 }
 
 function updateHud(game) {
@@ -71,8 +88,13 @@ function updateHud(game) {
     title.textContent = 'Paused';
     body.textContent = 'P 키로 재개';
   } else if (game.state === 'gameover') {
+    const s = loadStats();
     title.textContent = 'Game Over';
-    body.textContent = `Score ${game.score} · Cubes ${game.cubes} · B 키로 다시 시작`;
+    body.innerHTML =
+      `<strong>Score ${game.score}</strong> · Cubes ${game.cubes} · Lines ${game.layers}<br>` +
+      `Best score ${s.bestScore} · Best combo ${s.bestCombo}<br>` +
+      `<small>${s.games} games · ${s.totalCubes} cubes · ${s.totalLines} lines (누적)</small><br>` +
+      `B 키로 다시 시작`;
   }
 }
 

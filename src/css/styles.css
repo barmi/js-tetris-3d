@@ -1,4 +1,6 @@
-:root {
+/* ---------- Themes (data-theme) ---------- */
+
+:root, [data-theme="dark"] {
   --bg: #0b0d12;
   --bg-elev: #141823;
   --bg-elev-2: #1c2230;
@@ -8,6 +10,49 @@
   --accent-strong: #3a8fff;
   --danger: #ff5c7a;
   --border: #232a39;
+  --stage-bg: #05070b;
+}
+
+[data-theme="light"] {
+  --bg: #f3f5f9;
+  --bg-elev: #ffffff;
+  --bg-elev-2: #eef2f7;
+  --fg: #1a1f29;
+  --fg-dim: #5b6779;
+  --accent: #2a6fd8;
+  --accent-strong: #1857b0;
+  --danger: #d83a5e;
+  --border: #d1d8e0;
+  --stage-bg: #e8edf3;
+}
+
+[data-theme="neon"] {
+  --bg: #06000d;
+  --bg-elev: #110021;
+  --bg-elev-2: #1d0034;
+  --fg: #f8e8ff;
+  --fg-dim: #a080c0;
+  --accent: #ff00ff;
+  --accent-strong: #d000d0;
+  --danger: #ff3366;
+  --border: #4a0066;
+  --stage-bg: #050008;
+}
+
+[data-theme="minimal"] {
+  --bg: #161616;
+  --bg-elev: #1d1d1d;
+  --bg-elev-2: #252525;
+  --fg: #e5e5e5;
+  --fg-dim: #888888;
+  --accent: #cccccc;
+  --accent-strong: #ffffff;
+  --danger: #cc6677;
+  --border: #303030;
+  --stage-bg: #0c0c0c;
+}
+
+:root {
   --radius: 8px;
   --gap: 14px;
 }
@@ -21,6 +66,7 @@ html, body {
   background: var(--bg);
   color: var(--fg);
   font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  transition: background-color 0.3s, color 0.3s;
 }
 
 body {
@@ -87,7 +133,7 @@ body {
 
 .stage {
   position: relative;
-  background: #05070b;
+  background: var(--stage-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
@@ -110,7 +156,6 @@ body {
   backdrop-filter: blur(2px);
 }
 
-/* `.stage-overlay { display: flex }` 가 `[hidden]` 의 기본 `display:none` 을 덮으므로 명시적으로 다시 숨긴다. */
 .stage-overlay[hidden] {
   display: none;
 }
@@ -121,17 +166,12 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   text-align: center;
+  max-width: 80%;
 }
 
-.overlay-card h2 {
-  margin: 0 0 6px;
-  font-size: 18px;
-}
-
-.overlay-card p {
-  margin: 0;
-  color: var(--fg-dim);
-}
+.overlay-card h2 { margin: 0 0 6px; font-size: 18px; }
+.overlay-card p  { margin: 0; color: var(--fg-dim); line-height: 1.6; }
+.overlay-card small { color: var(--fg-dim); font-size: 11px; }
 
 /* ---------- Right panel ---------- */
 .panel {
@@ -232,7 +272,7 @@ body {
 #next-canvas {
   width: 120px;
   height: 120px;
-  background: #05070b;
+  background: var(--stage-bg);
   border-radius: 4px;
 }
 
@@ -266,14 +306,7 @@ body {
     grid-template-columns: 1fr;
     grid-template-rows: 60vh 1fr;
   }
-  .hud {
-    gap: 8px;
-  }
-  .hud-item {
-    min-width: 64px;
-    padding: 2px 6px;
-  }
-  .hud-value {
-    font-size: 14px;
-  }
+  .hud { gap: 8px; }
+  .hud-item { min-width: 64px; padding: 2px 6px; }
+  .hud-value { font-size: 14px; }
 }

@@ -17,6 +17,15 @@ import {
   applyCameraView, readCameraView, updateCameraControls,
 } from './cameraControls.js';
 import { loadCameraView, saveCameraView } from './storage.js';
+import { setColorPalette } from './blocksets.js';
+import { sfx, setEnabled as setSfxEnabled, unlock as unlockAudio } from './audio.js';
+
+const SCENE_BG = {
+  dark:    0x05070b,
+  light:   0xe8edf3,
+  neon:    0x050008,
+  minimal: 0x0c0c0c,
+};
 
 const canvas = document.getElementById('game-canvas');
 const stage = canvas.parentElement;
@@ -38,14 +47,23 @@ if (!applyCameraView(cameraState, loadCameraView())) {
 }
 
 const nextPreview = createNextPreview(nextCanvas);
-
 const game = new Game({ pit });
 
 let lastNextRef = null;
-game.on(() => {
-  if (game.next !== lastNextRef) {
-    lastNextRef = game.next;
-    nextPreview.setBlock(game.next);
+game.on((g, type) => {
+  // 다음 블럭이 바뀐 순간만 미리보기를 다시 그린다.
+  if (g.next !== lastNextRef) {
+    lastNextRef = g.next;
+    nextPreview.setBlock(g.next);
+  }
+  // SFX
+  switch (type) {
+    case 'move':     sfx.move(); break;
+    case 'rotate':   sfx.rotate(); break;
+    case 'drop':     sfx.drop(); break;
+    case 'lock':     sfx.lock(); break;
+    case 'clear':    sfx.clear(); break;
+    case 'gameover': sfx.gameOver(); break;
   }
 });
 
@@ -65,6 +83,18 @@ bindUI({
     game.setPit(pit);
   },
   onView: (preset) => applyPreset(cameraState, pit, preset),
+  onTheme: (name) => {
+    scene.background.setHex(SCENE_BG[name] ?? SCENE_BG.dark);
+  },
+  onPalette: (name) => {
+    setColorPalette(name);
+    game.dirty = true;
+    if (game.next) nextPreview.setBlock(game.next);
+  },
+  onSound: (v) => {
+    setSfxEnabled(v === 'on');
+    if (v === 'on') unlockAudio();
+  },
 });
 
 bindKeyboard({
@@ -73,7 +103,15 @@ bindKeyboard({
   onView: (preset) => applyPreset(cameraState, pit, preset),
 });
 
-// 카메라 변경(드래그/휠/패닝)을 throttle 해서 저장.
+// 사용자 첫 입력 시 AudioContext 잠금 해제 — autoplay 정책 회피.
+const unlockOnce = () => {
+  unlockAudio();
+  window.removeEventListener('keydown', unlockOnce, true);
+  window.removeEventListener('pointerdown', unlockOnce, true);
+};
+window.addEventListener('keydown', unlockOnce, true);
+window.addEventListener('pointerdown', unlockOnce, true);
+
 let lastSaveT = 0;
 cameraState.controls.addEventListener('change', () => {
   const t = performance.now();

@@ -1,8 +1,7 @@
 // next-canvas 에 다음 블록을 렌더하는 작은 three.js 씬.
-// 메인 씬과 분리된 별도 WebGLRenderer 를 사용한다.
 
 import * as THREE from 'three';
-import { PALETTE } from './blocksets.js';
+import { paletteColor } from './blocksets.js';
 
 export function createNextPreview(canvas) {
   const scene = new THREE.Scene();
@@ -44,7 +43,7 @@ export function createNextPreview(canvas) {
       const cx = sx / 2, cy = sy / 2, cz = sz / 2;
       const geom = new THREE.BoxGeometry(0.95, 0.95, 0.95);
       currentMat = new THREE.MeshStandardMaterial({
-        color: PALETTE[block.colorIdx]?.hex ?? 0xffffff,
+        color: paletteColor(block.colorIdx)?.hex ?? 0xffffff,
         roughness: 0.45, metalness: 0.05,
       });
       group = new THREE.Group();

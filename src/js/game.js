@@ -1,29 +1,45 @@
-// 게임 상태 머신. 입력은 tryMove / tryRotate / hardDrop / start / pause / reset 만 노출하고,
-// 렌더는 listeners(on) 로 알린다. dirty 플래그가 true 면 메인 루프가 메쉬를 갱신.
+// 게임 상태 머신. tryMove / tryRotate / hardDrop / start / pause / reset 만 노출하고,
+// 변경은 emit(type) 으로 알린다. type 에 따라 main.js 가 SFX 를 재생.
 
 import { pickRandomBlock } from './blocksets.js';
-import { saveHighScore } from './storage.js';
+import { saveHighScore, loadStats, saveStats } from './storage.js';
 
-// 드롭 간격 — 사용자 피드백을 반영하여 보수적으로(이전 1500/1000/600 → 3000/2000/1200).
-const SPEED_BASE_MS = { slow: 3000, medium: 2000, fast: 1200 };
+const SPEED_BASE_MS = {
+  antigravity: Infinity, // 자동 드롭 없음 — 사용자가 Space (hard drop) 으로 직접 떨어뜨려야 함.
+  slow: 3000,
+  medium: 2000,
+  fast: 1200,
+};
 const LAYER_BONUS = [0, 100, 250, 450, 700, 1000];
 const LINES_PER_LEVEL = 5;
 const MAX_LEVEL = 19;
 
-// 회전 시 wall-kick 시도 순서. 가까운 거리부터, 축 → 대각선 → 더 먼 거리.
-const ROT_KICKS = [
-  [ 1, 0, 0], [-1, 0, 0],
-  [ 0, 0, 1], [ 0, 0,-1],
-  [ 0, 1, 0], [ 0,-1, 0],
-  [ 1, 0, 1], [ 1, 0,-1], [-1, 0, 1], [-1, 0,-1],
-  [ 2, 0, 0], [-2, 0, 0],
-  [ 0, 0, 2], [ 0, 0,-2],
-  [ 0, 2, 0], [ 0,-2, 0],
-];
+// 회전 시 wall-kick 시도 offsets — 빈 공간이라면 거의 항상 회전할 수 있도록
+// dy = -1..+3, dx/dz = -2..+2 의 124 offsets 을 가까운 거리 순으로 정렬.
+const ROT_KICKS = (() => {
+  const range = 2;
+  const offs = [];
+  for (let dy = -1; dy <= 3; dy++) {
+    for (let dx = -range; dx <= range; dx++) {
+      for (let dz = -range; dz <= range; dz++) {
+        if (dx === 0 && dy === 0 && dz === 0) continue;
+        offs.push([dx, dy, dz]);
+      }
+    }
+  }
+  offs.sort((a, b) => {
+    const da = Math.abs(a[0]) + Math.abs(a[1]) + Math.abs(a[2]);
+    const db = Math.abs(b[0]) + Math.abs(b[1]) + Math.abs(b[2]);
+    if (da !== db) return da - db;
+    if (a[1] !== b[1]) return b[1] - a[1]; // +y 우선 (천장 위로 들어올렸다가 다시 내려오는 패턴)
+    return 0;
+  });
+  return offs;
+})();
 
 export function dropIntervalMs(speed, level) {
   const base = SPEED_BASE_MS[speed] ?? SPEED_BASE_MS.medium;
-  // level=4 에서도 base 의 60% 까지만. 너무 빨라지지 않게.
+  if (!Number.isFinite(base)) return Infinity;
   const factor = Math.max(0.40, 1 - level * 0.10);
   return base * factor;
 }
@@ -42,6 +58,7 @@ export class Game {
     this.dropAcc = 0;
     this.current = null;
     this.next = null;
+    this.bestComboThisGame = 0;
     this.dirty = true;
     this.listeners = new Set();
   }
@@ -60,7 +77,7 @@ export class Game {
       }
     }
     if (blockset) this.blockset = blockset;
-    this.emit();
+    this.emit('options');
   }
 
   start() {
@@ -68,6 +85,7 @@ export class Game {
     if (this.state === 'gameover') this.reset();
     if (this.state === 'idle') {
       this.level = this.startLevel;
+      this.bestComboThisGame = 0;
       this.next = pickRandomBlock(this.blockset, this.pit);
       this.spawn();
       if (this.state === 'gameover') return;
@@ -77,14 +95,14 @@ export class Game {
     }
     this.dropAcc = 0;
     this.dirty = true;
-    this.emit();
+    this.emit('state');
   }
 
   pause() {
     if (this.state === 'running') this.state = 'paused';
     else if (this.state === 'paused') this.state = 'running';
     else return;
-    this.emit();
+    this.emit('state');
   }
 
   reset() {
@@ -95,15 +113,17 @@ export class Game {
     this.dropAcc = 0;
     this.current = null;
     this.next = null;
+    this.bestComboThisGame = 0;
     this.state = 'idle';
     if (this.pit?.cells) this.pit.cells.fill(0);
     this.dirty = true;
-    this.emit();
+    this.emit('state');
   }
 
   update(dt) {
     if (this.state !== 'running') return;
     const interval = dropIntervalMs(this.speed, this.level);
+    if (!Number.isFinite(interval)) return; // antigravity
     this.dropAcc += dt;
     let safety = 200;
     while (this.dropAcc >= interval && safety-- > 0) {
@@ -123,7 +143,7 @@ export class Game {
       return;
     }
     this.dirty = true;
-    this.emit();
+    this.emit('spawn');
   }
 
   placeAtSpawn(block) {
@@ -141,7 +161,7 @@ export class Game {
     if (this.pit.canPlace(c.absCells())) {
       this.current = c;
       this.dirty = true;
-      this.emit();
+      this.emit('move');
       return true;
     }
     return false;
@@ -151,19 +171,23 @@ export class Game {
     if (this.state !== 'running' || !this.current) return false;
     const c = this.current.clone();
     c.rotate(axis, dir);
+
+    // 1) pit boundary 바깥으로 튀어 나간 셀이 있으면 안쪽으로 강제 평행이동.
+    fitInsidePit(c, this.pit);
     if (this.pit.canPlace(c.absCells())) {
       this.current = c;
       this.dirty = true;
-      this.emit();
+      this.emit('rotate');
       return true;
     }
-    // wall-kick: 가까운 순으로 다양한 평행이동을 시도. 모서리 / 벽에서도 회전이 가능하도록.
+
+    // 2) 그래도 안 되면 가까운 거리 순으로 wall-kick 시도. 빈 공간이면 이 단계에서 거의 성공.
     for (const [dx, dy, dz] of ROT_KICKS) {
       c.translate(dx, dy, dz);
       if (this.pit.canPlace(c.absCells())) {
         this.current = c;
         this.dirty = true;
-        this.emit();
+        this.emit('rotate');
         return true;
       }
       c.translate(-dx, -dy, -dz);
@@ -174,13 +198,36 @@ export class Game {
   hardDrop() {
     if (this.state !== 'running' || !this.current) return;
     let dropped = 0;
-    while (this.tryMove(0, -1, 0)) dropped++;
-    this.score += dropped * 2;
+    const c = this.current.clone();
+    while (true) {
+      c.translate(0, -1, 0);
+      if (!this.pit.canPlace(c.absCells())) {
+        c.translate(0, 1, 0);
+        break;
+      }
+      dropped++;
+    }
+    if (dropped > 0) {
+      this.current = c;
+      this.score += dropped * 2;
+    }
+    this.dirty = true;
+    this.emit('drop');
     this.lockAndSpawn();
   }
 
+  // 자동 드롭 한 칸. tryMove 와 분리된 emit('fall') — sfx 로 재생하지 않음.
   stepDown() {
-    if (!this.tryMove(0, -1, 0)) this.lockAndSpawn();
+    if (!this.current) return;
+    const c = this.current.clone();
+    c.translate(0, -1, 0);
+    if (this.pit.canPlace(c.absCells())) {
+      this.current = c;
+      this.dirty = true;
+      this.emit('fall');
+    } else {
+      this.lockAndSpawn();
+    }
   }
 
   lockAndSpawn() {
@@ -189,13 +236,17 @@ export class Game {
     this.pit.mergeBlock(cells, this.current.colorIdx);
     this.cubes += cells.length;
     this.score += cells.length;
+    this.dirty = true;
+    this.emit('lock');
 
     const cleared = this.pit.clearFullLayers();
     if (cleared > 0) {
       this.layers += cleared;
+      if (cleared > this.bestComboThisGame) this.bestComboThisGame = cleared;
       this.score += LAYER_BONUS[Math.min(cleared, LAYER_BONUS.length - 1)];
       const target = this.startLevel + Math.floor(this.layers / LINES_PER_LEVEL);
       if (target > this.level) this.level = Math.min(target, MAX_LEVEL);
+      this.emit('clear');
     }
     this.spawn();
   }
@@ -203,10 +254,39 @@ export class Game {
   gameOver() {
     this.state = 'gameover';
     saveHighScore(this.score);
+    // 누적 통계 갱신.
+    const s = loadStats();
+    s.games = (s.games || 0) + 1;
+    s.totalCubes = (s.totalCubes || 0) + this.cubes;
+    s.totalLines = (s.totalLines || 0) + this.layers;
+    if (this.score > (s.bestScore || 0)) s.bestScore = this.score;
+    if (this.bestComboThisGame > (s.bestCombo || 0)) s.bestCombo = this.bestComboThisGame;
+    saveStats(s);
     this.dirty = true;
-    this.emit();
+    this.emit('gameover');
   }
 
   on(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
-  emit() { for (const fn of this.listeners) fn(this); }
+  emit(type) { for (const fn of this.listeners) fn(this, type); }
+}
+
+// 회전 후 셀 BBox 가 pit X / Z 외부로 나갔거나 음의 Y 면 안쪽으로 자동 평행이동.
+// 천장 위(y >= height) 는 그대로 둠 — 큰 polycube 가 스폰 직후 일시적으로 천장 위에 걸칠 수 있음.
+function fitInsidePit(block, pit) {
+  let mnX = Infinity, mnY = Infinity, mnZ = Infinity;
+  let mxX = -Infinity, mxZ = -Infinity;
+  for (const [x, y, z] of block.absCells()) {
+    if (x < mnX) mnX = x;
+    if (y < mnY) mnY = y;
+    if (z < mnZ) mnZ = z;
+    if (x > mxX) mxX = x;
+    if (z > mxZ) mxZ = z;
+  }
+  let dx = 0, dy = 0, dz = 0;
+  if (mnX < 0) dx = -mnX;
+  else if (mxX >= pit.width) dx = pit.width - 1 - mxX;
+  if (mnZ < 0) dz = -mnZ;
+  else if (mxZ >= pit.depth) dz = pit.depth - 1 - mxZ;
+  if (mnY < 0) dy = -mnY;
+  if (dx || dy || dz) block.translate(dx, dy, dz);
 }
