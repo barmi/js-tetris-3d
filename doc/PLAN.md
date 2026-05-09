@@ -150,8 +150,15 @@ Phase 0 (기반)  →  Phase 1 (Blockout 클론)  →  Phase 2 (자유 카메라
 - [ ] **모바일 터치** — `OrbitControls` 와 single-touch 가 충돌해 별도 디자인 필요(가상 D-pad / 영역 분할). 다음 라운드
 - [ ] **리플레이** — 입력 시퀀스 기록 / 재생. 다음 라운드
 - [x] **화면 흔들림 / 파티클** — 라인 클리어 시 셀당 4개 파티클 폭발(중력 적용, 700 ms 수명) + 카메라 흔들림(라인 수에 비례, 240 ms ease-out²). 게임오버 시 더 강한 흔들림(0.4 / 480 ms)
-- [ ] **PWA / 오프라인** — CDN three.js 캐싱 정책 정리 필요. 다음 라운드
+- [x] **PWA / 오프라인** — `src/manifest.json` + `src/sw.js` + `src/icon.svg` 추가. 자체 자산은 `cache-first`, CDN three.js (`unpkg.com`) 는 `stale-while-revalidate` 로 첫 fetch 후 캐시. 첫 로드 후 오프라인에서도 게임 가능. `file://` 에서는 SW 등록을 건너뛰어 정적 서버 / HTTPS 환경에서만 동작
 - [ ] **레벨별 음악** — 선택 사항, 보류
+
+### 사용자 피드백 6차
+
+- [x] **z 축 연속 회전 시 블럭이 위/아래로 누적 이동하는 버그 수정** — 원인은 `Math.round` 의 비대칭(`0.5 → 1`, `-0.5 → 0`). 매 회전이 `before = absCentroid()` 를 새로 계산하니 이전 round 오차가 다음 회전의 기준값에 누적되어 한쪽으로 쏠림.
+  - 해결: `Block.idealCentroid` 추가 — 생성 시점의 절대 무게중심을 floating-point 로 보존. 회전은 항상 이 ideal 기준의 차이를 round 하므로 round 오차가 누적되지 않고, 회전 4번이면 원래 cells/position 으로 복귀.
+  - `translate` / `setPosition` 만 idealC 를 함께 이동. `clone()` 도 idealC 를 카피.
+  - `Game.placeAtSpawn` 이 `block.position = …` → `block.setPosition(...)` 으로 변경되어 spawn 후에도 idealC 가 새 위치에 동기화됨.
 
 ### 사용자 피드백 5차
 

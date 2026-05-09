@@ -1,6 +1,9 @@
-// 블록 모델. 정수 좌표로 셀을 보관하고, 회전은 정수 회전 행렬로 처리한다.
-// 회전은 블럭의 무게중심(centroid) 을 기준으로 — 회전 후 absCentroid 가 같은 곳에 있도록 position 을 조정.
-// 정수 grid 위에서 짝수 폭 블럭은 round 차이 ≤ 0.5 만큼 어긋날 수 있다.
+// 블록 모델. 정수 좌표 셀 + 정수 회전 행렬.
+// 회전은 무게중심(centroid) 기준이지만, 짝수 폭 블럭은 90° 회전 후 centroid 가 0.5 단위로 어긋나
+// `Math.round(0.5 → 1, -0.5 → 0)` 의 비대칭이 누적되면 z 축 연속 회전 시 블럭이 한쪽으로 떠오른다.
+// 이를 막기 위해 생성 시점의 절대 무게중심을 floating-point 로 보존(`idealCentroid`)하고,
+// 매 회전이 이 ideal 기준의 차이를 round 한다 — 회전 4번 후 원래 cells/position 으로 복귀.
+// `translate` / `setPosition` 만 idealCentroid 를 함께 이동.
 
 export class Block {
   /**
@@ -14,6 +17,7 @@ export class Block {
     this.id = id;
     this.position = [0, 0, 0];
     this.normalize();
+    this.idealCentroid = this.absCentroid();
   }
 
   clone() {
@@ -22,30 +26,37 @@ export class Block {
     b.colorIdx = this.colorIdx;
     b.id = this.id;
     b.position = [...this.position];
+    b.idealCentroid = [...this.idealCentroid];
     return b;
+  }
+
+  // position 직접 설정 (예: spawn). idealCentroid 도 새 위치 기준으로 재계산.
+  setPosition(x, y, z) {
+    this.position[0] = x;
+    this.position[1] = y;
+    this.position[2] = z;
+    this.idealCentroid = this.absCentroid();
   }
 
   translate(dx, dy, dz) {
     this.position[0] += dx;
     this.position[1] += dy;
     this.position[2] += dz;
+    this.idealCentroid[0] += dx;
+    this.idealCentroid[1] += dy;
+    this.idealCentroid[2] += dz;
   }
 
-  // 무게중심 회전 — 회전 전후의 absCentroid 를 일치시키는 방향으로 position 을 조정.
+  // 무게중심 회전 — idealCentroid 와 회전 후 absCentroid 의 차이 만큼 position 보정.
+  // idealCentroid 자체는 회전에서 변하지 않으므로 round 오차가 누적되지 않는다.
   rotate(axis, dir = 1) {
     const r = ROT[axis][dir > 0 ? 'cw' : 'ccw'];
-
-    const before = this.absCentroid();
-
     this.cells = this.cells.map(([x, y, z]) => r(x, y, z));
     this.normalize();
-
     const after = this.absCentroid();
-
-    // 정수 grid 유지를 위해 round. 짝수 길이 블럭은 round 차이 ≤ 0.5.
-    this.position[0] += Math.round(before[0] - after[0]);
-    this.position[1] += Math.round(before[1] - after[1]);
-    this.position[2] += Math.round(before[2] - after[2]);
+    this.position[0] += Math.round(this.idealCentroid[0] - after[0]);
+    this.position[1] += Math.round(this.idealCentroid[1] - after[1]);
+    this.position[2] += Math.round(this.idealCentroid[2] - after[2]);
   }
 
   // 셀 좌표를 0 이상으로 평행이동.
@@ -77,7 +88,6 @@ export class Block {
     return this.cells.map(([x, y, z]) => [x + px, y + py, z + pz]);
   }
 
-  // 절대 좌표의 무게중심 (셀 중심 기준).
   absCentroid() {
     const n = this.cells.length;
     let cx = 0, cy = 0, cz = 0;

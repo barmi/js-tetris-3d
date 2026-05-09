@@ -219,6 +219,16 @@ function tick(now) {
 }
 requestAnimationFrame(tick);
 
+// PWA — service worker 등록. file:// 에서는 등록 안 함 (정적 서버에서만 동작).
+if ('serviceWorker' in navigator
+    && (location.protocol === 'http:' || location.protocol === 'https:')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((e) => {
+      console.warn('SW register failed:', e);
+    });
+  });
+}
+
 function parsePitDims(s) {
   return s.split('x').map((n) => parseInt(n, 10));
 }

@@ -155,7 +155,8 @@ export class Game {
     const px = Math.floor((this.pit.width - sx) / 2);
     const pz = Math.floor((this.pit.depth - sz) / 2);
     const py = this.pit.height - sy;
-    block.position = [px, py, pz];
+    // setPosition 으로 idealCentroid 도 같이 새 위치에 동기화 (회전 누적 버그 회피).
+    block.setPosition(px, py, pz);
   }
 
   tryMove(dx, dy, dz) {

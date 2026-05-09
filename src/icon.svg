@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="js-tetris-3d icon">
+  <rect width="512" height="512" rx="96" fill="#0b0d12"/>
+  <g transform="translate(256 256)">
+    <!-- 3D 큐브 — top / left / right 면 + 외곽선 -->
+    <polygon points="0,-150 150,-75 0,0" fill="#3498db" opacity="0.85"/>
+    <polygon points="0,-150 -150,-75 0,0" fill="#9b59b6" opacity="0.85"/>
+    <polygon points="-150,-75 -150,75 0,150 0,0" fill="#2ecc71" opacity="0.85"/>
+    <polygon points="150,-75 150,75 0,150 0,0" fill="#e67e22" opacity="0.85"/>
+    <polygon
+      points="0,-150 150,-75 150,75 0,150 -150,75 -150,-75"
+      fill="none" stroke="#66aaff" stroke-width="6" stroke-linejoin="round"/>
+    <polyline points="0,-150 0,0 150,75" fill="none" stroke="#66aaff" stroke-width="6" stroke-linejoin="round"/>
+    <polyline points="0,0 -150,75" fill="none" stroke="#66aaff" stroke-width="6" stroke-linejoin="round"/>
+  </g>
+</svg>

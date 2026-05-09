@@ -1,0 +1,15 @@
+{
+  "name": "js-tetris-3d",
+  "short_name": "Tetris 3D",
+  "description": "Three.js 기반의 3D 테트리스 (Blockout 스타일) — 빌드 없이 순수 JS / CSS 로 동작.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b0d12",
+  "theme_color": "#0b0d12",
+  "lang": "ko",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
