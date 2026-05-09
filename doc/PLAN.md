@@ -127,7 +127,15 @@ Phase 0 (기반)  →  Phase 1 (Blockout 클론)  →  Phase 2 (자유 카메라
 - [x] **낙하 가이드**: hard-drop 시 멈출 위치를 노란색 wireframe ghost block 으로 표시
 - [-] (생략) 수직 가이드 점선 — ghost block 이 동등한 정보를 더 깔끔하게 전달하므로 보류
 - [x] 카메라 상태(`{px,py,pz,tx,ty,tz}`) `localStorage` 에 저장 — `controls.change` 이벤트를 500 ms throttle
-- [x] 사용자 피드백 반영 — 드롭 속도 완화: base `slow/medium/fast = 1500 / 1000 / 600 ms`, level factor `max(0.30, 1 − 0.10·level)`
+- [x] 사용자 피드백 1차 — 드롭 속도 완화: base 1500 / 1000 / 600 ms, factor `max(0.30, 1 − 0.10·level)`
+- [x] 사용자 피드백 2차 — Phase 2 직후 추가 보강:
+  - 드롭 속도 추가 완화: base **3000 / 2000 / 1200 ms**, factor `max(0.40, 1 − 0.10·level)`
+  - 카메라 프리셋 distMul 줄임 (이전 2.4 ~ 2.6 → **1.40 ~ 1.60**) — 화면을 거의 꽉 채움
+  - Top 프리셋 polar **0.05 → 0.20π** — 4 측벽이 충분히 보여 깊이감 유지 (왜곡 허용)
+  - ISO 프리셋 azimuth **45° → 30°** (`π/6`) — +X / +Z 방향이 또렷하게 갈려 화살표 이동 직관화
+  - 셀 메쉬 `RoundedBoxGeometry(0.99, .., 0.12)` + `flatShading: false` — 갭 거의 없는 둥근 모서리 큐브 (떨어지는 블럭 wireframe 은 그대로 직선 edges)
+  - 회전 wall-kick 확장 — 6 방향 → 16 방향 (±1 / ±2 / 대각 4) 으로, 모서리 / 벽에서도 회전 가능
+  - BASIC 블럭셋을 직관적인 단순 3D 블럭(TRIPOD / L3D / T3D) 으로 정리
 
 ---
 

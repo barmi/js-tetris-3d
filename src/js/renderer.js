@@ -1,14 +1,15 @@
 // pit 외곽선 + 4 측벽 격자 + 쌓인 셀 InstancedMesh + 떨어지는 블럭 그룹(와이어프레임 + 벽 그림자) + ghost block.
 
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { PALETTE, layerColorHex } from './blocksets.js';
 
 const CELL = 1;
-const WIRE_COLOR = 0xffffff;            // 떨어지는 블럭 와이어프레임은 흰색 통일.
+const WIRE_COLOR = 0xffffff;
 const SHADOW_OPACITY = 0.45;
 const GAP_EPS = 0.002;
 const SHADOW_EPS = 0.012;
-const GHOST_COLOR = 0xfff366;           // hard-drop 위치를 표시하는 ghost 색.
+const GHOST_COLOR = 0xfff366;
 const GHOST_OPACITY = 0.55;
 
 export function createPitMesh(pit) {
@@ -19,7 +20,6 @@ export function createPitMesh(pit) {
   const d = pit.depth * CELL;
   const h = pit.height * CELL;
 
-  // 외곽 와이어프레임.
   const boxGeo = new THREE.BoxGeometry(w, h, d);
   const edges = new THREE.EdgesGeometry(boxGeo);
   const lines = new THREE.LineSegments(
@@ -29,7 +29,6 @@ export function createPitMesh(pit) {
   lines.position.set(w / 2, h / 2, d / 2);
   group.add(lines);
 
-  // 바닥 면.
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(w, d),
     new THREE.MeshStandardMaterial({ color: 0x0c1220, roughness: 0.95, metalness: 0 }),
@@ -69,13 +68,15 @@ function buildPitGrid(pit) {
   );
 }
 
-// 쌓인 셀만 그리는 InstancedMesh. 색은 Y(높이) 기반.
+// 쌓인 셀 InstancedMesh. 색은 Y(높이) 기반.
+// 셀 사이즈 0.99 — 인접 셀과 거의 갭 없이 붙되 같은 평면 z-fighting 은 회피.
+// 모서리는 RoundedBoxGeometry(radius 0.12) 로 둥글게.
 export function createCellsMesh(pit) {
-  const geom = new THREE.BoxGeometry(0.92, 0.92, 0.92);
+  const geom = new RoundedBoxGeometry(0.99, 0.99, 0.99, 4, 0.12);
   const mat = new THREE.MeshStandardMaterial({
     roughness: 0.55,
     metalness: 0.05,
-    flatShading: true,
+    flatShading: false, // 둥근 모서리에 부드러운 셰이딩
   });
   const max = Math.max(1, pit.width * pit.depth * pit.height);
   const mesh = new THREE.InstancedMesh(geom, mat, max);
@@ -109,6 +110,7 @@ export function updateCellsMesh(mesh, pit) {
 }
 
 // 떨어지는 블럭 그룹: (1) 흰 셀 와이어프레임, (2) X=0 / Z=0 두 벽면의 X-Z 단면 그림자.
+// 떨어지는 블럭은 frame 으로만 표시되므로 둥근 모서리는 적용하지 않는다 (직선 wireframe 이 더 또렷).
 export function createCurrentBlockGroup() {
   const group = new THREE.Group();
   group.name = 'current-block';
@@ -184,7 +186,6 @@ export function updateGhostGroup(group, block, pit) {
   }
   if (!block || !pit) return;
 
-  // hard-drop 위치 시뮬레이션.
   const ghost = block.clone();
   while (true) {
     ghost.translate(0, -1, 0);
@@ -193,7 +194,6 @@ export function updateGhostGroup(group, block, pit) {
       break;
     }
   }
-  // 이미 바닥 직전(현재 위치와 동일)이면 ghost 미표시.
   if (ghost.position[1] === block.position[1]) return;
 
   const verts = [];
@@ -211,7 +211,7 @@ export function updateGhostGroup(group, block, pit) {
   group.add(new THREE.LineSegments(geo, mat));
 }
 
-// 셀 (x,y,z) 의 12 edge 좌표를 verts 에 push. 인접 셀과 z-fighting 회피용으로 살짝 안쪽 inset.
+// 셀 (x,y,z) 의 12 edge 좌표를 verts 에 push. 인접 셀과의 z-fighting 회피용으로 살짝 안쪽 inset.
 function pushCubeEdges(out, x, y, z) {
   const a = 0.04, b = 0.96;
   const X = [x + a, x + b], Y = [y + a, y + b], Z = [z + a, z + b];

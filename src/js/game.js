@@ -4,23 +4,34 @@
 import { pickRandomBlock } from './blocksets.js';
 import { saveHighScore } from './storage.js';
 
-// 드롭 간격 — 사용자 피드백 반영하여 전체적으로 느리게 (이전 900/600/350 → 1500/1000/600).
-const SPEED_BASE_MS = { slow: 1500, medium: 1000, fast: 600 };
+// 드롭 간격 — 사용자 피드백을 반영하여 보수적으로(이전 1500/1000/600 → 3000/2000/1200).
+const SPEED_BASE_MS = { slow: 3000, medium: 2000, fast: 1200 };
 const LAYER_BONUS = [0, 100, 250, 450, 700, 1000];
 const LINES_PER_LEVEL = 5;
 const MAX_LEVEL = 19;
 
+// 회전 시 wall-kick 시도 순서. 가까운 거리부터, 축 → 대각선 → 더 먼 거리.
+const ROT_KICKS = [
+  [ 1, 0, 0], [-1, 0, 0],
+  [ 0, 0, 1], [ 0, 0,-1],
+  [ 0, 1, 0], [ 0,-1, 0],
+  [ 1, 0, 1], [ 1, 0,-1], [-1, 0, 1], [-1, 0,-1],
+  [ 2, 0, 0], [-2, 0, 0],
+  [ 0, 0, 2], [ 0, 0,-2],
+  [ 0, 2, 0], [ 0,-2, 0],
+];
+
 export function dropIntervalMs(speed, level) {
   const base = SPEED_BASE_MS[speed] ?? SPEED_BASE_MS.medium;
-  // 레벨업이 너무 가팔라지지 않게 — level=4 에서도 base 의 60%.
-  const factor = Math.max(0.30, 1 - level * 0.10);
+  // level=4 에서도 base 의 60% 까지만. 너무 빨라지지 않게.
+  const factor = Math.max(0.40, 1 - level * 0.10);
   return base * factor;
 }
 
 export class Game {
   constructor({ pit }) {
     this.pit = pit;
-    this.state = 'idle'; // 'idle' | 'running' | 'paused' | 'gameover'
+    this.state = 'idle';
     this.score = 0;
     this.cubes = 0;
     this.layers = 0;
@@ -90,7 +101,6 @@ export class Game {
     this.emit();
   }
 
-  // dt: ms.
   update(dt) {
     if (this.state !== 'running') return;
     const interval = dropIntervalMs(this.speed, this.level);
@@ -116,7 +126,6 @@ export class Game {
     this.emit();
   }
 
-  // 블록 X-Z 를 pit 중앙에, Y 를 천장에 맞춤.
   placeAtSpawn(block) {
     const [sx, sy, sz] = block.size();
     const px = Math.floor((this.pit.width - sx) / 2);
@@ -148,9 +157,8 @@ export class Game {
       this.emit();
       return true;
     }
-    // 단순 wall-kick: 6방향 ±1 평행이동 시도.
-    const KICKS = [[-1,0,0],[1,0,0],[0,0,-1],[0,0,1],[0,1,0],[0,-1,0]];
-    for (const [dx, dy, dz] of KICKS) {
+    // wall-kick: 가까운 순으로 다양한 평행이동을 시도. 모서리 / 벽에서도 회전이 가능하도록.
+    for (const [dx, dy, dz] of ROT_KICKS) {
       c.translate(dx, dy, dz);
       if (this.pit.canPlace(c.absCells())) {
         this.current = c;

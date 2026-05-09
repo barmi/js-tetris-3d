@@ -6,11 +6,14 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const TWEEN_MS = 600;
 
 // (azimuth, polar) — three.js Spherical 규약: polar 는 +Y 축에서 잰 각, azimuth 는 +Z 축에서 +X 쪽으로.
+// distMul 은 모두 1.4 ~ 1.6 — 화면이 거의 꽉 차도록.
 const PRESETS = {
-  iso:   { az: Math.PI * 0.25, polar: Math.PI * 0.30, distMul: 2.4 },
-  top:   { az: 0,              polar: 0.05,           distMul: 2.4 },
-  front: { az: 0,              polar: Math.PI * 0.45, distMul: 2.6 },
-  side:  { az: Math.PI / 2,    polar: Math.PI * 0.45, distMul: 2.6 },
+  // ISO azimuth = 30° (π/6). 45° 일 때 +X / +Z 가 화면에서 거의 같은 방향이라 화살표가 헷갈리던 문제 해소.
+  iso:   { az: Math.PI / 6,    polar: Math.PI * 0.30, distMul: 1.55 },
+  // Top 은 polar 를 살짝 키움 (0.05 → 0.20π). 4 측벽이 충분히 보여 깊이감 유지.
+  top:   { az: Math.PI / 6,    polar: Math.PI * 0.20, distMul: 1.40 },
+  front: { az: 0,              polar: Math.PI * 0.45, distMul: 1.60 },
+  side:  { az: Math.PI / 2,    polar: Math.PI * 0.45, distMul: 1.60 },
 };
 
 export function createCameraControls(camera, dom, pit) {
