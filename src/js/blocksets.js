@@ -1,42 +1,49 @@
-// FLAT / BASIC / EXTENDED 블록 세트 정의.
-//
-// 현재는 골격만 두고, 정확한 블록 목록은 PLAN.md 의 "미해결 / 확인 필요" 항목으로 남겨
-// Phase 1.2 에서 레퍼런스 사이트와 대조하며 채운다.
-//
-// 데이터 형식:
-//   { id, color, cells: [[x, y, z], ...] }
-// 모든 좌표는 0 이상의 정수, 원점은 (0,0,0).
+// 색 팔레트 + FLAT / BASIC / EXTENDED 블록 세트 정의.
+// 정확한 레퍼런스 블록 목록은 doc/PLAN.md "미해결 / 확인 필요" 항목 참고.
 
 import { Block } from './block.js';
 
-// FLAT: 깊이가 1 인 폴리오미노. 클래식 2D 테트리스의 7종을 3D 좌표로 lift 한 형태.
+// 색 인덱스 → 색. 0 은 비어있음.
+export const PALETTE = [
+  null,
+  { hex: 0xe74c3c }, // 1: red
+  { hex: 0xf1c40f }, // 2: yellow
+  { hex: 0x9b59b6 }, // 3: purple
+  { hex: 0xe67e22 }, // 4: orange
+  { hex: 0x3498db }, // 5: blue
+  { hex: 0x2ecc71 }, // 6: green
+  { hex: 0x1abc9c }, // 7: teal
+  { hex: 0xff5d8f }, // 8: pink
+];
+
+// FLAT: 평면 폴리오미노. 모든 셀의 y=0. 클래식 테트리스 7종.
 const FLAT_DEFS = [
   { id: 'I', color: 1, cells: [[0,0,0],[1,0,0],[2,0,0],[3,0,0]] },
   { id: 'O', color: 2, cells: [[0,0,0],[1,0,0],[0,0,1],[1,0,1]] },
   { id: 'T', color: 3, cells: [[0,0,0],[1,0,0],[2,0,0],[1,0,1]] },
-  { id: 'L', color: 4, cells: [[0,0,0],[0,0,1],[0,0,2],[1,0,0]] },
-  { id: 'J', color: 5, cells: [[0,0,0],[0,0,1],[0,0,2],[1,0,2]] },
+  { id: 'L', color: 4, cells: [[0,0,0],[0,0,1],[0,0,2],[1,0,2]] },
+  { id: 'J', color: 5, cells: [[1,0,0],[1,0,1],[1,0,2],[0,0,2]] },
   { id: 'S', color: 6, cells: [[1,0,0],[2,0,0],[0,0,1],[1,0,1]] },
   { id: 'Z', color: 7, cells: [[0,0,0],[1,0,0],[1,0,1],[2,0,1]] },
 ];
 
-// BASIC: 3D 결합. 직선/꺾임/모서리 조합.
+// BASIC: FLAT + 작은 3D polycube.
 const BASIC_DEFS = [
-  { id: 'I3', color: 1, cells: [[0,0,0],[1,0,0],[2,0,0]] },
-  { id: 'L3', color: 2, cells: [[0,0,0],[1,0,0],[0,1,0]] },
-  { id: 'CORNER', color: 3, cells: [[0,0,0],[1,0,0],[0,0,1],[0,1,0]] }, // 직각 3축
-  { id: 'BOX', color: 4, cells: [[0,0,0],[1,0,0],[0,0,1],[1,0,1],[0,1,0]] },
-  { id: 'T3D', color: 5, cells: [[0,0,0],[1,0,0],[2,0,0],[1,1,0]] },
+  ...FLAT_DEFS,
+  { id: 'TRIPOD', color: 8, cells: [[0,0,0],[1,0,0],[0,0,1],[0,1,0]] },
+  { id: 'L3D',    color: 1, cells: [[0,0,0],[1,0,0],[1,0,1],[1,1,1]] },
+  { id: 'SKEW',   color: 6, cells: [[0,0,0],[1,0,0],[1,1,0],[1,1,1]] },
 ];
 
-// EXTENDED: 5-cube 이상의 polycube.
+// EXTENDED: BASIC + 더 큰 / 다양한 polycube.
 const EXTENDED_DEFS = [
   ...BASIC_DEFS,
-  { id: 'PLUS', color: 6, cells: [[1,0,0],[0,0,1],[1,0,1],[2,0,1],[1,0,2],[1,1,1]] },
-  { id: 'CUBE2', color: 7, cells: [
+  { id: 'CUBE2', color: 2, cells: [
     [0,0,0],[1,0,0],[0,0,1],[1,0,1],
     [0,1,0],[1,1,0],[0,1,1],[1,1,1],
   ] },
+  { id: 'PLUS3D', color: 3, cells: [[1,0,0],[0,0,1],[1,0,1],[2,0,1],[1,0,2],[1,1,1]] },
+  { id: 'STAIR',  color: 4, cells: [[0,0,0],[1,0,0],[1,1,0],[1,1,1],[2,1,1]] },
 ];
 
 export const BLOCKSETS = {
@@ -45,8 +52,30 @@ export const BLOCKSETS = {
   extended: EXTENDED_DEFS,
 };
 
-export function pickRandomBlock(setId) {
-  const defs = BLOCKSETS[setId] ?? BLOCKSETS.basic;
+// 블록의 정규화 후 크기를 계산.
+function defExtents(cells) {
+  let mx = 0, my = 0, mz = 0;
+  for (const [x, y, z] of cells) {
+    if (x > mx) mx = x;
+    if (y > my) my = y;
+    if (z > mz) mz = z;
+  }
+  return [mx + 1, my + 1, mz + 1];
+}
+
+function fitsInPit(cells, pit) {
+  const [sx, sy, sz] = defExtents(cells);
+  return sx <= pit.width && sy <= pit.height && sz <= pit.depth;
+}
+
+// pit 이 주어지면 그 pit 에 들어갈 수 있는 블록만 후보로 한다.
+// 들어가는 블록이 하나도 없으면(이론상 없는 상황) 원본 목록에서 그대로 뽑는다.
+export function pickRandomBlock(setId, pit) {
+  let defs = BLOCKSETS[setId] ?? BLOCKSETS.basic;
+  if (pit) {
+    const filtered = defs.filter((d) => fitsInPit(d.cells, pit));
+    if (filtered.length > 0) defs = filtered;
+  }
   const def = defs[Math.floor(Math.random() * defs.length)];
   return new Block(def.cells, def.color, def.id);
 }

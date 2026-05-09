@@ -1,9 +1,9 @@
-// pit 와이어프레임 / 큐브 인스턴스 메쉬를 만드는 헬퍼.
-// 게임 상태(점유 그리드, 현재 블록)를 받아 three.js 메쉬를 갱신한다.
+// pit 와이어프레임 / 격자, 점유 셀 + 현재 블록을 위한 InstancedMesh 와 갱신 함수.
 
 import * as THREE from 'three';
+import { PALETTE } from './blocksets.js';
 
-const CELL = 1; // 한 셀의 월드 단위 크기.
+const CELL = 1;
 
 export function createPitMesh(pit) {
   const group = new THREE.Group();
@@ -13,7 +13,6 @@ export function createPitMesh(pit) {
   const d = pit.depth * CELL;
   const h = pit.height * CELL;
 
-  // 와이어프레임 박스(천장은 열린 느낌을 위해 위쪽 모서리만 흐리게).
   const boxGeo = new THREE.BoxGeometry(w, h, d);
   const edges = new THREE.EdgesGeometry(boxGeo);
   const lines = new THREE.LineSegments(
@@ -23,41 +22,72 @@ export function createPitMesh(pit) {
   lines.position.set(w / 2, h / 2, d / 2);
   group.add(lines);
 
-  // 바닥 면.
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(w, d),
-    new THREE.MeshStandardMaterial({ color: 0x111722, roughness: 0.95, metalness: 0.0 }),
+    new THREE.MeshStandardMaterial({ color: 0x0e1420, roughness: 0.95, metalness: 0 }),
   );
   floor.rotation.x = -Math.PI / 2;
   floor.position.set(w / 2, 0, d / 2);
   group.add(floor);
 
-  // 바닥 격자 (셀 단위).
-  const gridGeo = new THREE.BufferGeometry();
   const verts = [];
-  for (let i = 0; i <= pit.width; i++) {
-    verts.push(i * CELL, 0.001, 0, i * CELL, 0.001, d);
-  }
-  for (let i = 0; i <= pit.depth; i++) {
-    verts.push(0, 0.001, i * CELL, w, 0.001, i * CELL);
-  }
-  gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  for (let i = 0; i <= pit.width; i++) verts.push(i * CELL, 0.001, 0, i * CELL, 0.001, d);
+  for (let i = 0; i <= pit.depth; i++) verts.push(0, 0.001, i * CELL, w, 0.001, i * CELL);
   const grid = new THREE.LineSegments(
-    gridGeo,
-    new THREE.LineBasicMaterial({ color: 0x223044, transparent: true, opacity: 0.8 }),
+    new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(verts, 3)),
+    new THREE.LineBasicMaterial({ color: 0x223044, transparent: true, opacity: 0.85 }),
   );
   group.add(grid);
 
   return group;
 }
 
-// Phase 1 에서 점유 그리드를 따라 큐브를 그릴 인스턴스 메쉬 생성기.
-// 지금은 stub. 호출 시 빈 메쉬를 돌려준다.
-export function createCellsMesh(pit) {
-  const geom = new THREE.BoxGeometry(CELL * 0.96, CELL * 0.96, CELL * 0.96);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x4488ff, roughness: 0.5 });
-  const max = pit.width * pit.depth * pit.height;
+// 점유 셀 + 현재 블록을 단일 InstancedMesh 로 그린다. capacity 는 pit 부피 + 여유분.
+export function createCellsMesh(pit, blockReserve = 16) {
+  const geom = new THREE.BoxGeometry(CELL * 0.95, CELL * 0.95, CELL * 0.95);
+  const mat = new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.05 });
+  const max = pit.width * pit.depth * pit.height + blockReserve;
   const mesh = new THREE.InstancedMesh(geom, mat, max);
+  mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(max * 3), 3);
   mesh.count = 0;
   return mesh;
+}
+
+const _m = new THREE.Matrix4();
+const _c = new THREE.Color();
+
+export function updateCellsMesh(mesh, pit, currentBlock) {
+  const capacity = mesh.instanceMatrix.count;
+  let i = 0;
+
+  for (let y = 0; y < pit.height; y++) {
+    for (let z = 0; z < pit.depth; z++) {
+      for (let x = 0; x < pit.width; x++) {
+        const v = pit.get(x, y, z);
+        if (!v || i >= capacity) continue;
+        _m.makeTranslation(x + 0.5, y + 0.5, z + 0.5);
+        mesh.setMatrixAt(i, _m);
+        _c.setHex(PALETTE[v]?.hex ?? 0xffffff);
+        mesh.setColorAt(i, _c);
+        i++;
+      }
+    }
+  }
+
+  if (currentBlock) {
+    const colorHex = PALETTE[currentBlock.colorIdx]?.hex ?? 0xffffff;
+    for (const [x, y, z] of currentBlock.absCells()) {
+      // 천장 위 부분은 그리지 않는다(스폰 시 일시적으로 발생할 수 있음).
+      if (y >= pit.height || y < 0 || i >= capacity) continue;
+      _m.makeTranslation(x + 0.5, y + 0.5, z + 0.5);
+      mesh.setMatrixAt(i, _m);
+      _c.setHex(colorHex);
+      mesh.setColorAt(i, _c);
+      i++;
+    }
+  }
+
+  mesh.count = i;
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
 }

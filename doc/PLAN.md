@@ -36,63 +36,70 @@ Phase 0 (기반)  →  Phase 1 (Blockout 클론)  →  Phase 2 (자유 카메라
 
 ### 1.1 데이터 모델
 
-- [ ] `Pit` 클래스
-  - `(width, depth, height)` 로 초기화
-  - `cells: Uint8Array(width * depth * height)` (0 = 비어있음, >0 = 색 인덱스)
-  - `index(x, y, z)`, `get`, `set`, `isOccupied`
-  - `isInside(x, y, z)`, `isCollision(blockCells, offset)`
-  - `mergeBlock(blockCells, offset, colorIdx)`
-  - `clearFullLayers(): number` — 가득 찬 Y 층 모두 제거하고 위 칸을 끌어내림
-- [ ] `Block` 클래스
-  - `cells: Array<[x, y, z]>` (블록 로컬 좌표, 정수)
-  - `position: [x, y, z]` (pit 좌표계의 원점)
-  - `rotateAroundAxis(axis: 'x'|'y'|'z', dir: +1|-1)` — 정수 회전 행렬 적용 후 정규화(음수 좌표를 0 이상으로 평행이동)
-  - `cellsInPit(): Array<[x, y, z]>` — 위치를 더한 절대 좌표 반환
+- [x] `Pit` 클래스
+  - [x] `(width, depth, height)` 로 초기화
+  - [x] `cells: Uint8Array(width * depth * height)` (0 = 비어있음, >0 = 색 인덱스)
+  - [x] `index(x, y, z)`, `get`, `set`, `isOccupied`
+  - [x] `isInside(x, y, z)`, `canPlace(absCells)`
+  - [x] `mergeBlock(absCells, colorIdx)`
+  - [x] `clearFullLayers(): number` — 가득 찬 Y 층 모두 제거하고 위 칸을 끌어내림
+- [x] `Block` 클래스
+  - [x] `cells: Array<[x, y, z]>` (블록 로컬 좌표, 정수)
+  - [x] `position: [x, y, z]` (pit 좌표계의 원점)
+  - [x] `rotate(axis: 'x'|'y'|'z', dir: +1|-1)` — 정수 회전 행렬 적용 후 정규화(음수 좌표 평행이동)
+  - [x] `absCells()` — 위치를 더한 절대 좌표 반환
+  - [x] `size()` — 정규화 후 [sizeX, sizeY, sizeZ] 반환
+  - [x] `clone()` — 변경 후보를 만들고 충돌 검사할 때 사용
 
 ### 1.2 블록 세트 정의
 
-- [ ] `FLAT`: 평면(z 값이 모두 동일) 폴리오미노 — 클래식 테트리스 7종 + 추가 변형
-- [ ] `BASIC`: 3D 큐브 결합 — 직선/모서리/T/L 의 3D 변형
-- [ ] `EXTENDED`: 5-cube 이상의 확장 polycube
-- [ ] 각 블록에 색 인덱스 / 회전 대칭군 메타데이터 추가
-- [ ] (확인 필요) 레퍼런스 사이트의 정확한 블록 목록과 비교 / 정렬
+- [x] `FLAT`: 평면(y=0) 폴리오미노 — 클래식 테트리스 7종(I/O/T/L/J/S/Z)
+- [x] `BASIC`: FLAT + 작은 3D polycube (TRIPOD, L3D, SKEW)
+- [x] `EXTENDED`: BASIC + 더 큰 polycube (CUBE2, PLUS3D, STAIR)
+- [x] 각 블록에 색 인덱스 부여 + 8색 `PALETTE` 정의
+- [x] `pickRandomBlock(setId, pit)` — 현재 pit 에 들어갈 수 있는 블록만 후보로
+- [ ] (확인 필요) 레퍼런스 사이트의 정확한 블록 목록과 비교 / 정렬 — 미해결로 이관
 
 ### 1.3 게임 루프
 
-- [ ] `Game` 상태 머신: `idle` / `running` / `paused` / `gameover`
-- [ ] 드롭 타이머: 레벨·속도에 따른 `dropIntervalMs`
-- [ ] 한 틱마다: `tryStep(0, -1, 0)` 실패 시 `mergeBlock` → `clearFullLayers` → 점수·레벨 갱신 → 다음 블록 생성
-- [ ] 다음 블록(NEXT) 큐: 1~3 개 미리 보기
-- [ ] 게임 오버: 새 블록이 즉시 충돌
+- [x] `Game` 상태 머신: `idle` / `running` / `paused` / `gameover`
+- [x] 드롭 타이머: 레벨·속도에 따른 `dropIntervalMs(speed, level)` (자체 공식)
+- [x] 한 틱마다: `tryMove(0,-1,0)` 실패 시 `mergeBlock` → `clearFullLayers` → 점수·레벨 갱신 → `spawn`
+- [x] 다음 블록(NEXT) 1개 미리보기
+- [x] 게임 오버: 스폰 직후 충돌 시 `gameOver` (하이스코어 저장)
 
 ### 1.4 입력
 
-- [ ] 키 매핑: 화살표(이동), QWE/ASD(회전), Space(하드 드롭), B/P/Esc
-- [ ] 키 리피트: 같은 키를 누르고 있을 때 일정 간격으로 반복 이동
-- [ ] 입력 → `Game` 의 의도 메서드 호출 (예: `game.tryMove(dx, dy, dz)`, `game.tryRotate(axis, dir)`)
+- [x] 키 매핑: 화살표(이동), QWE/ASD(회전), Space(하드 드롭), B/P/Esc
+- [x] 키 리피트(DAS 스타일): 화살표만 적용. 220 ms 지연 후 70 ms 간격 반복
+- [x] OS 키 리피트(`ev.repeat`)는 무시하고 직접 관리 + `blur` 시 일괄 정리
+- [x] 입력 → `Game.tryMove` / `tryRotate` / `hardDrop` / `start` / `pause` / `reset`
 
 ### 1.5 렌더링
 
-- [ ] 셀 단위 큐브 인스턴스 메쉬 (또는 `InstancedMesh`)
-- [ ] 색 팔레트 (블록당 1색)
-- [ ] pit 와이어프레임 + 바닥 격자
-- [ ] 현재 블록 / 고정된 블록 / 다음 블록 미리보기 별 레이어
+- [x] 셀 단위 `InstancedMesh` (capacity = pit 부피 + 블록 여유분)
+- [x] 색 팔레트 (`instanceColor` 사용)
+- [x] pit 와이어프레임 + 바닥 + 셀 격자
+- [x] 점유 셀 + 현재 블록을 한 메쉬로 합쳐 `dirty` 시점에만 갱신
+- [x] 다음 블록 미리보기 — 별도 three.js 씬 + Orthographic 카메라
 
 ### 1.6 UI / HUD
 
-- [ ] 상단: `Cubes Played`, `High Score`, `Score`, `Level`
-- [ ] 우측 패널: Rotation / Speed / Level / Pit / Block Set 라디오 그룹
-- [ ] 옵션 변경 → `Game.applyOptions()` (게임 진행 중에는 다음 게임에 적용)
-- [ ] `Start` / `Pause` / `Reset` 버튼
-- [ ] `localStorage` 로 마지막 옵션 / 하이스코어 저장
+- [x] 상단: `Cubes Played`, `High Score`, `Score`, `Level`
+- [x] 우측 패널: Rotation / Speed / Level / Pit / Block Set 라디오 그룹
+- [x] 옵션 변경: speed/level/blockset 은 `applyOptions`, pit 은 `onPitChange` 콜백으로 메쉬 재생성
+- [x] `Start` / `Pause` / `Reset` 버튼
+- [x] `localStorage` 로 마지막 옵션 / 하이스코어 저장
+- [x] 중앙 오버레이: idle / paused / gameover 상태 메시지
 
-### 1.7 점수 시스템 (레퍼런스 추정치 기반, 확인 필요)
+### 1.7 점수 시스템 (자체 공식)
 
-- [ ] 한 큐브 배치당 기본 점수
-- [ ] 한 층 클리어 보너스
-- [ ] 동시 다층 클리어 가산점
-- [ ] 하드 드롭 보너스
-- [ ] (확인 필요) 레퍼런스 사이트의 정확한 공식
+- [x] 큐브 배치 점수: 1점 / cube
+- [x] 한 층 클리어 보너스: 100 (1) / 250 (2) / 450 (3) / 700 (4) / 1000 (5+)
+- [x] 동시 다층 클리어: 위 보너스 표가 누진
+- [x] 하드 드롭 보너스: 떨어진 거리 × 2
+- [x] 레벨업: 누적 클리어 라인 5 마다 시작 레벨 + 1, 최대 19
+- [ ] (확인 필요) 레퍼런스 사이트의 정확한 공식 — 미해결로 이관
 
 ---
 
