@@ -3,7 +3,7 @@
 
 import { Block } from './block.js';
 
-// 색 인덱스 → 색. 0 은 비어있음.
+// 블럭 ID 별 강조색. 다음 블럭 미리보기, 떨어지는 블럭의 벽면 그림자에 사용.
 export const PALETTE = [
   null,
   { hex: 0xe74c3c }, // 1: red
@@ -15,6 +15,24 @@ export const PALETTE = [
   { hex: 0x1abc9c }, // 7: teal
   { hex: 0xff5d8f }, // 8: pink
 ];
+
+// 쌓인 블럭의 Y(높이)에 따른 색. 한 층마다 색이 바뀐다 — 누적 패턴을 한눈에 파악하기 위함.
+// pit 의 height 를 넘기면 이 배열을 순환한다.
+export const LAYER_COLORS = [
+  0xe74c3c, // 0: red
+  0xe67e22, // 1: orange
+  0xf1c40f, // 2: yellow
+  0x2ecc71, // 3: green
+  0x1abc9c, // 4: teal
+  0x3498db, // 5: blue
+  0x9b59b6, // 6: purple
+  0xff5d8f, // 7: pink
+];
+
+export function layerColorHex(y) {
+  const n = LAYER_COLORS.length;
+  return LAYER_COLORS[((y % n) + n) % n];
+}
 
 // FLAT: 평면 폴리오미노. 모든 셀의 y=0. 클래식 테트리스 7종.
 const FLAT_DEFS = [

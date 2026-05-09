@@ -101,6 +101,18 @@ Phase 0 (기반)  →  Phase 1 (Blockout 클론)  →  Phase 2 (자유 카메라
 - [x] 레벨업: 누적 클리어 라인 5 마다 시작 레벨 + 1, 최대 19
 - [ ] (확인 필요) 레퍼런스 사이트의 정확한 공식 — 미해결로 이관
 
+### 1.8 시각 폴리시 (사용자 피드백 반영)
+
+목표: 첫인상에서 게임 상태가 한눈에 들어오도록 정돈한다.
+
+- [x] CSS: `.stage-overlay[hidden]` 가 실제로 숨겨지도록 수정 — `display: flex` 가 `[hidden]` 의 기본 `display: none` 을 덮던 문제
+- [x] 라이팅 강화: `HemisphereLight` + key/fill `DirectionalLight`. 렌더러 `outputColorSpace = SRGBColorSpace` 명시
+- [x] 셀 머터리얼 `flatShading: true` + 사이즈 0.92 — 면별 명도 차이로 경계가 또렷
+- [x] pit 4 측벽(+ 바닥)에 셀 격자 라인 추가 — 측면에서도 떨어지는 블럭의 X·Z 위치 파악 가능
+- [x] 쌓인 블럭 색을 Y(높이)에 따라 8색 순환 (`LAYER_COLORS`) — 누적 패턴이 한눈에 들어옴
+- [x] 떨어지는 블럭은 흰색 와이어프레임으로 표시 — 쌓인 블럭과 명확히 구분
+- [x] X=0 / Z=0 두 벽면에 떨어지는 블럭의 X-Z 단면 그림자 — 블럭 색 반투명, 같은 (y,z) / (x,y) 셀은 중복 제거
+
 ---
 
 ## Phase 2 — 마우스 자유 카메라 (본 프로젝트의 핵심 차별점)

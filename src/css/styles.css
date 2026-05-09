@@ -110,6 +110,11 @@ body {
   backdrop-filter: blur(2px);
 }
 
+/* `.stage-overlay { display: flex }` 가 `[hidden]` 의 기본 `display:none` 을 덮으므로 명시적으로 다시 숨긴다. */
+.stage-overlay[hidden] {
+  display: none;
+}
+
 .overlay-card {
   padding: 18px 24px;
   background: var(--bg-elev);
