@@ -55,6 +55,20 @@ npx --yes http-server src -p 8080 -c-1
 
 페이지 로드 후 service worker 가 자동 등록됩니다. 모바일 Chrome / Safari 의 메뉴에서 "홈 화면에 추가" 를 누르면 standalone 앱처럼 실행되며 오프라인에서도 동작합니다.
 
+### GitHub Pages 배포
+
+저장소에 `.github/workflows/pages.yml` 이 포함되어 있어 `main` 브랜치 푸시 시 `src/` 디렉토리가 자동으로 GitHub Pages 에 배포됩니다.
+
+1. 저장소 **Settings → Pages → Source** 를 `GitHub Actions` 로 변경
+2. `main` 브랜치에 푸시 (또는 Actions 탭에서 워크플로우 수동 실행)
+3. `https://<user>.github.io/<repo-name>/` 에서 확인
+
+상대 경로(`./js/...`, `./sw.js`, `./manifest.json`) 와 import map 의 절대 URL CDN 만 사용하므로 서브디렉토리 prefix 가 자동으로 적용됩니다.
+
+#### 재배포 시 캐시 갱신
+
+자체 자산은 service worker 가 cache-first 로 응답합니다. 새 배포 후 사용자가 새 빌드를 받게 하려면 [src/sw.js](./src/sw.js) 의 `CACHE_NAME` (`js-tetris-3d-v1` → `v2` …) 을 올리세요. `activate` 시점에 옛 캐시가 자동 정리됩니다.
+
 ---
 
 ## 폴더 구조
