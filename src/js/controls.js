@@ -27,7 +27,10 @@ const KEY_MAP = {
 const REPEAT_DELAY_MS = 220;
 const REPEAT_INTERVAL_MS = 70;
 
-export function bindKeyboard({ game, camera, onView }) {
+// AP 활성 중에 허용할 액션 — 게임 입력은 차단하되 시작/정지/일시정지/시점/AP 토글은 허용.
+const AP_ALLOWED = new Set(['start', 'pause', 'stop', 'view']);
+
+export function bindKeyboard({ game, camera, autoPlay, onView }) {
   const repeats = new Map();
 
   function clearRepeat(code) {
@@ -40,6 +43,7 @@ export function bindKeyboard({ game, camera, onView }) {
   function clearAllRepeats() { for (const code of [...repeats.keys()]) clearRepeat(code); }
 
   function runAction(action) {
+    if (autoPlay?.enabled && !AP_ALLOWED.has(action.kind)) return;
     switch (action.kind) {
       case 'move': {
         const [dx, dz] = camera ? screenArrowToPit(camera, action.code) : [0, 0];

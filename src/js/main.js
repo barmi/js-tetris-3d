@@ -24,6 +24,7 @@ import {
 import { loadCameraView, saveCameraView } from './storage.js';
 import { setColorPalette } from './blocksets.js';
 import { sfx, setEnabled as setSfxEnabled, unlock as unlockAudio } from './audio.js';
+import { AutoPlay } from './autoPlay.js';
 
 const SCENE_BG = {
   dark:    0x05070b,
@@ -59,6 +60,13 @@ if (!applyCameraView(cameraState, loadCameraView())) {
 const axesGizmo = createAxesGizmo(axesCanvas);
 const nextPreview = createNextPreview(nextCanvas);
 const game = new Game({ pit });
+const autoPlay = new AutoPlay(game);
+
+function setApUiActive(enabled) {
+  const apBar = document.querySelector('[data-ap-bar]');
+  if (apBar) apBar.hidden = !enabled;
+  document.querySelector('[data-action="auto"]')?.classList.toggle('btn-active', enabled);
+}
 
 // 회전 애니메이션 상태.
 let rotationAnim = null;       // { fromQuat, fromPos, toPos, t0, dur }
@@ -83,6 +91,11 @@ game.on((g, type) => {
   if (g.next !== lastNextRef) {
     lastNextRef = g.next;
     nextPreview.setBlock(g.next);
+  }
+  if (type === 'spawn') autoPlay.onSpawn();
+  if (type === 'gameover' && autoPlay.enabled) {
+    autoPlay.enabled = false;
+    setApUiActive(false);
   }
   switch (type) {
     case 'move':     sfx.move(); break;
@@ -153,11 +166,17 @@ bindUI({
       fallingBlockMesh.quaternion.identity();
     }
   },
+  onAuto: () => {
+    const enabled = autoPlay.toggle();
+    setApUiActive(enabled);
+  },
+  onAutoSpeed: (v) => autoPlay.setIntervalMs(v),
 });
 
 bindKeyboard({
   game,
   camera,
+  autoPlay,
   onView: (preset) => applyPreset(cameraState, pit, preset),
 });
 
@@ -187,6 +206,7 @@ function tick(now) {
   const dt = Math.min(50, now - lastT);
   lastT = now;
   game.update(dt);
+  autoPlay.update(now);
   if (game.dirty) {
     updateCellsMesh(cellsMesh, pit);
     updateFallingBlockMesh(fallingBlockMesh, game.current);

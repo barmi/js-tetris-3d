@@ -25,6 +25,7 @@ const SELF_PRECACHE = [
   './js/audio.js',
   './js/effects.js',
   './js/axesGizmo.js',
+  './js/autoPlay.js',
 ];
 
 self.addEventListener('install', (e) => {

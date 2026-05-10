@@ -44,6 +44,11 @@
     <section class="stage" aria-label="3D game stage">
       <canvas id="game-canvas"></canvas>
       <canvas id="axes-canvas" class="axes-gizmo" width="110" height="110" aria-label="axes gizmo"></canvas>
+      <div class="ap-bar" data-ap-bar hidden>
+        <span class="ap-label">AP Speed</span>
+        <input type="range" min="100" max="2000" value="600" step="50" data-ap-speed aria-label="auto play speed" />
+        <span class="ap-value" data-ap-speed-display>600 ms</span>
+      </div>
       <div class="stage-overlay" data-overlay hidden>
         <div class="overlay-card">
           <h2 data-overlay-title>Press B to start</h2>
@@ -55,6 +60,7 @@
     <aside class="panel" aria-label="game options">
       <div class="panel-actions">
         <button type="button" data-action="start">Start (B)</button>
+        <button type="button" data-action="auto" class="btn-ap" title="Auto Play 토글">AP</button>
         <button type="button" data-action="pause">Pause (P)</button>
         <button type="button" data-action="reset">Reset</button>
       </div>

@@ -189,10 +189,10 @@ body {
   min-height: 0;
 }
 
-/* Action buttons (Start / Pause / Reset) */
+/* Action buttons (Start / AP / Pause / Reset) — Start 가 첫 줄 풀 폭, 나머지가 다음 줄 3등분. */
 .panel-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 6px;
 }
 
@@ -212,10 +212,59 @@ body {
 }
 
 .panel-actions button[data-action="start"] {
-  grid-column: span 2;
+  grid-column: span 3;
   border-color: var(--accent-strong);
   color: var(--accent);
   font-weight: 600;
+}
+
+.panel-actions .btn-ap {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.panel-actions button.btn-active {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: var(--bg);
+}
+
+/* Auto Play 속도 슬라이더 — stage 우상단(axes-gizmo 와 안 겹치게) */
+.ap-bar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  z-index: 5;
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+
+.ap-bar[hidden] { display: none; }
+
+.ap-bar .ap-label {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.ap-bar .ap-value {
+  font-variant-numeric: tabular-nums;
+  min-width: 56px;
+  text-align: right;
+}
+
+.ap-bar input[type="range"] {
+  width: 140px;
+  accent-color: var(--accent-strong);
+  cursor: pointer;
 }
 
 /* View preset buttons */

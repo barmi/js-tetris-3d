@@ -153,6 +153,19 @@ Phase 0 (기반)  →  Phase 1 (Blockout 클론)  →  Phase 2 (자유 카메라
 - [x] **PWA / 오프라인** — `src/manifest.json` + `src/sw.js` + `src/icon.svg` 추가. 자체 자산은 `cache-first`, CDN three.js (`unpkg.com`) 는 `stale-while-revalidate` 로 첫 fetch 후 캐시. 첫 로드 후 오프라인에서도 게임 가능. `file://` 에서는 SW 등록을 건너뛰어 정적 서버 / HTTPS 환경에서만 동작
 - [ ] **레벨별 음악** — 선택 사항, 보류
 
+### Phase 3.x — 자동 플레이 (Auto Play)
+
+목표: AI 가 현재 블럭의 최적 placement 를 골라 단계별로 실행. 사용자는 속도만 조절.
+
+- [x] `src/js/autoPlay.js` 신규 — `AutoPlay` 클래스 + BFS 회전 열거 + 휴리스틱 평가 + step 시퀀스
+- [x] **회전 BFS** — `cellsKey` (정규화 + sort + join) 로 unique pose 식별, 6 회전 축으로 BFS 하여 각 pose 의 최단 회전 path 함께 캐시
+- [x] **placement 평가** — 가상 grid 에 cells 머지 → 라인 클리어 시뮬 → `cleared·1000 + cleared²·500 − holes·80 − bumpiness·5 − aggHeight·0.5 − maxHeight·3`
+- [x] **단계별 실행** — 매 `intervalMs` 에 한 가지 동작만 (회전 → X → Z → drop), `Game` 의 기존 `tryRotate` / `tryMove` / `hardDrop` 사용 → 회전 anim / SFX / 통계가 자연 연결
+- [x] **UI** — `AP` 버튼(`panel-actions` 3-column 으로 재구성, Start 가 첫 줄 풀 폭) + stage 우상단 속도 슬라이더(`100 ms ~ 2000 ms`, 50 ms step). 활성 시 `btn-active` 강조 + 슬라이더 표시
+- [x] **입력 차단** — `controls.js` 의 `runAction` 이 `autoPlay.enabled` 시 게임 입력(`move / drop / rot`)은 차단, 시작 / 정지 / 일시정지 / 시점은 허용
+- [x] **gameover 자동 종료** — 게임오버 시 AP 자동 비활성화 + UI 갱신
+- [x] **service worker precache 갱신** — `autoPlay.js` 추가
+
 ### 사용자 피드백 6차
 
 - [x] **z 축 연속 회전 시 블럭이 위/아래로 누적 이동하는 버그 수정** — 원인은 `Math.round` 의 비대칭(`0.5 → 1`, `-0.5 → 0`). 매 회전이 `before = absCentroid()` 를 새로 계산하니 이전 round 오차가 다음 회전의 기준값에 누적되어 한쪽으로 쏠림.

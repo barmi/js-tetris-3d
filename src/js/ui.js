@@ -21,6 +21,7 @@ export function readOptions() {
 export function bindUI({
   game, onPitChange, onOptionsChange, onView,
   onTheme, onPalette, onSound, onRotateAnim,
+  onAuto, onAutoSpeed,
 }) {
   const opts = readOptions();
 
@@ -71,6 +72,22 @@ export function bindUI({
   document.querySelector('[data-action="start"]')?.addEventListener('click', () => game.start());
   document.querySelector('[data-action="pause"]')?.addEventListener('click', () => game.pause());
   document.querySelector('[data-action="reset"]')?.addEventListener('click', () => game.reset());
+  document.querySelector('[data-action="auto"]')?.addEventListener('click', () => onAuto?.());
+
+  // AP 슬라이더 — 활성 시에만 보이지만 핸들러는 항상 등록.
+  const apSpeedEl = document.querySelector('[data-ap-speed]');
+  const apSpeedDisplayEl = document.querySelector('[data-ap-speed-display]');
+  if (apSpeedEl) {
+    const updateApDisplay = () => {
+      if (apSpeedDisplayEl) apSpeedDisplayEl.textContent = `${apSpeedEl.value} ms`;
+    };
+    apSpeedEl.addEventListener('input', () => {
+      onAutoSpeed?.(+apSpeedEl.value);
+      updateApDisplay();
+    });
+    updateApDisplay();
+    onAutoSpeed?.(+apSpeedEl.value);
+  }
 
   document.querySelectorAll('[data-view]').forEach((btn) => {
     btn.addEventListener('click', () => onView?.(btn.getAttribute('data-view')));
