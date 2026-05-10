@@ -79,3 +79,44 @@ export function bindKeyboard({ game, camera, autoPlay, onView }) {
   window.addEventListener('keyup', (ev) => clearRepeat(ev.code));
   window.addEventListener('blur', clearAllRepeats);
 }
+
+// 모바일 가상 키보드 — `[data-vp]` 버튼들의 click 을 게임 입력으로 매핑.
+// 이동은 카메라 yaw 기준이라 `screenArrowToPit` 사용.
+const VP_ARROW = {
+  up:    'ArrowUp',
+  down:  'ArrowDown',
+  left:  'ArrowLeft',
+  right: 'ArrowRight',
+};
+const VP_ROT = {
+  'rot-x-cw':  ['x',  1],
+  'rot-x-ccw': ['x', -1],
+  'rot-y-cw':  ['y',  1],
+  'rot-y-ccw': ['y', -1],
+  'rot-z-cw':  ['z',  1],
+  'rot-z-ccw': ['z', -1],
+};
+
+export function bindVirtualPad({ game, camera, autoPlay }) {
+  document.querySelectorAll('[data-vp]').forEach((btn) => {
+    const action = btn.getAttribute('data-vp');
+    btn.addEventListener('click', () => {
+      if (autoPlay?.enabled) return; // AP 활성 시 차단 — 키보드와 동일한 정책.
+      runVpAction(action, game, camera);
+    });
+  });
+}
+
+function runVpAction(action, game, camera) {
+  if (action in VP_ARROW) {
+    const [dx, dz] = camera ? screenArrowToPit(camera, VP_ARROW[action]) : [0, 0];
+    if (dx || dz) game.tryMove(dx, 0, dz);
+    return;
+  }
+  if (action in VP_ROT) {
+    const [axis, dir] = VP_ROT[action];
+    game.tryRotate(axis, dir);
+    return;
+  }
+  if (action === 'drop') game.hardDrop();
+}

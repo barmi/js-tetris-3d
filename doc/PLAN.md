@@ -153,6 +153,15 @@ Phase 0 (기반)  →  Phase 1 (Blockout 클론)  →  Phase 2 (자유 카메라
 - [x] **PWA / 오프라인** — `src/manifest.json` + `src/sw.js` + `src/icon.svg` 추가. 자체 자산은 `cache-first`, CDN three.js (`unpkg.com`) 는 `stale-while-revalidate` 로 첫 fetch 후 캐시. 첫 로드 후 오프라인에서도 게임 가능. `file://` 에서는 SW 등록을 건너뛰어 정적 서버 / HTTPS 환경에서만 동작
 - [ ] **레벨별 음악** — 선택 사항, 보류
 
+### 사용자 피드백 7차 — 모바일 레이아웃 + 기본 속도
+
+- [x] **모바일 가상 키보드** — `<section class="virtual-pad">` 신규 (`index.html`). 좌측 D-pad(이동 4) + 우측 3 × 2 회전(X/Y/Z ±) + 하단 풀 폭 DROP. 데스크탑에선 `display: none`, `max-width: 720px` 에서 `display: grid`
+- [x] **3 행 레이아웃** — `@media (max-width: 720px)` 의 `.layout` 을 `grid-template-rows: 50vh auto auto` 로. 화면 위에서 아래 순으로 stage → virtual-pad → 옵션 패널, 전체 세로 스크롤 가능
+- [x] **bindVirtualPad** — `controls.js` 신규 export. `[data-vp]` 버튼의 click 을 `screenArrowToPit` (이동) / `tryRotate` / `hardDrop` 으로 라우팅. `autoPlay.enabled` 시 차단(키보드와 동일)
+- [x] **AP 슬라이더 모바일 조정** — `width: 100px`, value `min-width: 48px` 로 좁은 stage 에서도 보이게
+- [x] **터치 최적화** — 버튼에 `touch-action: manipulation`, `-webkit-tap-highlight-color: transparent`, `:active` 시 `accent-strong` 강조
+- [x] **기본 속도 antigravity** — `index.html` 의 `<option selected>` 와 `ui.js` 의 default fallback 둘 다 `'antigravity'` 로 갱신. 첫 진입 사용자가 자동 드롭에 압박받지 않도록
+
 ### Phase 3.x — 자동 플레이 (Auto Play)
 
 목표: AI 가 현재 블럭의 최적 placement 를 골라 단계별로 실행. 사용자는 속도만 조절.

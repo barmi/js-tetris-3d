@@ -15,7 +15,7 @@ import { createNextPreview } from './nextPreview.js';
 import { createAxesGizmo } from './axesGizmo.js';
 import { Game } from './game.js';
 import { bindUI, readOptions } from './ui.js';
-import { bindKeyboard } from './controls.js';
+import { bindKeyboard, bindVirtualPad } from './controls.js';
 import {
   createCameraControls, configureForPit, applyPreset,
   applyCameraView, readCameraView, updateCameraControls,
@@ -179,6 +179,9 @@ bindKeyboard({
   autoPlay,
   onView: (preset) => applyPreset(cameraState, pit, preset),
 });
+
+// 모바일 가상 키보드 — 데스크탑에선 CSS 로 숨김. 핸들러는 항상 등록.
+bindVirtualPad({ game, camera, autoPlay });
 
 const unlockOnce = () => {
   unlockAudio();

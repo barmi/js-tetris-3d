@@ -57,6 +57,25 @@
       </div>
     </section>
 
+    <!-- 모바일 가상 키보드 — 데스크탑에서는 CSS 로 숨김. -->
+    <section class="virtual-pad" aria-label="touch controls">
+      <div class="vp-cluster vp-move" aria-label="이동">
+        <button type="button" data-vp="up"    aria-label="이동 위">↑</button>
+        <button type="button" data-vp="left"  aria-label="이동 왼쪽">←</button>
+        <button type="button" data-vp="right" aria-label="이동 오른쪽">→</button>
+        <button type="button" data-vp="down"  aria-label="이동 아래">↓</button>
+      </div>
+      <div class="vp-cluster vp-rotate" aria-label="회전">
+        <button type="button" data-vp="rot-x-cw"  aria-label="X축 시계">X+</button>
+        <button type="button" data-vp="rot-y-cw"  aria-label="Y축 시계">Y+</button>
+        <button type="button" data-vp="rot-z-cw"  aria-label="Z축 시계">Z+</button>
+        <button type="button" data-vp="rot-x-ccw" aria-label="X축 반시계">X−</button>
+        <button type="button" data-vp="rot-y-ccw" aria-label="Y축 반시계">Y−</button>
+        <button type="button" data-vp="rot-z-ccw" aria-label="Z축 반시계">Z−</button>
+      </div>
+      <button type="button" class="vp-drop" data-vp="drop" aria-label="하드 드롭">DROP</button>
+    </section>
+
     <aside class="panel" aria-label="game options">
       <div class="panel-actions">
         <button type="button" data-action="start">Start (B)</button>
@@ -80,9 +99,9 @@
       <div class="opt-row">
         <label for="opt-speed">Speed</label>
         <select id="opt-speed" data-option="speed">
-          <option value="antigravity">Antigravity</option>
+          <option value="antigravity" selected>Antigravity</option>
           <option value="slow">Slow</option>
-          <option value="medium" selected>Medium</option>
+          <option value="medium">Medium</option>
           <option value="fast">Fast</option>
         </select>
       </div>

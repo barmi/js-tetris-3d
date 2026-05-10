@@ -7,7 +7,7 @@ const VALID_THEMES = ['dark', 'light', 'neon', 'minimal'];
 export function readOptions() {
   const stored = loadOptions();
   return {
-    speed:       stored.speed       ?? readSelect('speed')       ?? 'medium',
+    speed:       stored.speed       ?? readSelect('speed')       ?? 'antigravity',
     level:       stored.level       ?? readSelect('level')       ?? '0',
     pit:         stored.pit         ?? readSelect('pit')         ?? '5x5x10',
     blockset:    stored.blockset    ?? readSelect('blockset')    ?? 'basic',
